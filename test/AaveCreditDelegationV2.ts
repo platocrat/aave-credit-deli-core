@@ -15,8 +15,8 @@ import { Dai } from '../typechain'
 
 import DaiArtifact from '../artifacts/contracts/DAI.sol/DAI.json'
 
-describe('MyV2CreditDelegation', () => {
-  let myV2CreditDelegation: Contract,
+describe('AaveCreditDelegationV2', () => {
+  let aaveCreditDelegationV2: Contract,
     depositorSigner: JsonRpcSigner,
     delegator: string, // == contract creator
     delegatee: string,
@@ -46,25 +46,25 @@ describe('MyV2CreditDelegation', () => {
 
     dai = await hre.ethers.getContractAt('IERC20', daiAddress) as Dai
 
-    const myV2CreditDelegationAddress: string = hre
+    const aaveCreditDelegationV2Address: string = hre
       .ethers.utils.getContractAddress({
         from: delegator,
         nonce: (await hre.ethers.provider.getTransactionCount(delegator)) + 1
       })
 
-    await dai.approve(myV2CreditDelegationAddress, depositAmount)
+    await dai.approve(aaveCreditDelegationV2Address, depositAmount)
 
     depositorSigner = await hre.ethers.provider.getSigner(delegator)
 
     // Create CD contract
-    const MyV2CreditDelegation = await hre.ethers.getContractFactory(
-      'MyV2CreditDelegation',
+    const AaveCreditDelegationV2 = await hre.ethers.getContractFactory(
+      'aaveCreditDelegationV2',
       depositorSigner
     )
 
-    myV2CreditDelegation = await MyV2CreditDelegation.deploy()
+    aaveCreditDelegationV2 = await AaveCreditDelegationV2.deploy()
 
-    await myV2CreditDelegation.deployed()
+    await aaveCreditDelegationV2.deployed()
 
     /**
      * @dev 
@@ -96,8 +96,8 @@ describe('MyV2CreditDelegation', () => {
     })
 
     it('delegator should have 100 less DAI after depositing collateral', async () => {
-      await myV2CreditDelegation.setCanPullFundsFromCaller(canPull)
-      await myV2CreditDelegation.depositCollateral(
+      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPull)
+      await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
         // User approves this contract to pull funds from his/her account
@@ -123,32 +123,32 @@ describe('MyV2CreditDelegation', () => {
       /**
        * @dev Send 200 DAI from CompoundDai contract to CD contract address
        */
-      balanceBefore = await dai.balanceOf(myV2CreditDelegation.address)
+      balanceBefore = await dai.balanceOf(aaveCreditDelegationV2.address)
 
       await dai.transfer(
-        myV2CreditDelegation.address,
+        aaveCreditDelegationV2.address,
         hre.ethers.utils.parseUnits('200', 'wei')
       )
     })
 
     // Send 200 to CD contract
     it('delegator should now hold 200 DAI after sending DAI to contract', async () => {
-      const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(myV2CreditDelegation.address)
+      const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
       const diff: BigNumber = balanceAfterReceivingDAI.sub(balanceBefore)
 
       expect(diff.toString()).to.equal('200')
     })
 
     it('contract should have 100 less DAI after depositing collateral', async () => {
-      await myV2CreditDelegation.setCanPullFundsFromCaller(canPull)
-      await myV2CreditDelegation.depositCollateral(
+      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPull)
+      await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
         // User approves this contract to pull funds from his/her account
         canPull
       )
 
-      const balanceAfterDepositingCollateral: BigNumber = await dai.balanceOf(myV2CreditDelegation.address)
+      const balanceAfterDepositingCollateral: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
       const diff: BigNumber = balanceAfterDepositingCollateral.sub(balanceBefore)
 
       expect(diff.toString()).to.equal("100")
@@ -166,7 +166,7 @@ describe('MyV2CreditDelegation', () => {
        */
       const ownerSigner = await hre.ethers.provider.getSigner(delegator)
 
-      await myV2CreditDelegation.connect(ownerSigner).approveBorrower(
+      await aaveCreditDelegationV2.connect(ownerSigner).approveBorrower(
         // address borrower
         delegatee,
         // test borrowing of full `depositAmount` and varying amounts of it
@@ -177,7 +177,7 @@ describe('MyV2CreditDelegation', () => {
     })
 
     it('repay the borrower', async () => {
-      await myV2CreditDelegation.
+      await aaveCreditDelegationV2.
     })
   })
 })

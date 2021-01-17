@@ -17,7 +17,7 @@ import {SafeERC20} from "./Libraries.sol";
  * See @dev comments
  */
 
-contract MyV2CreditDelegation {
+contract AaveCreditDelegationV2 {
     using SafeERC20 for IERC20;
 
     // ---------- State variables ----------
