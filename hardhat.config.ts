@@ -1,6 +1,6 @@
 import { task } from 'hardhat/config'
-import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-waffle'
+import '@nomiclabs/hardhat-ethers'
 import 'dotenv/config'
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -38,21 +38,35 @@ export default {
       }
     }
   },
-  paths: {
-    artifacts: "./app/artifacts",
-  },
   solidity: {
     compilers: [
       {
-        version: "0.7.5",
+        version: '0.8.0',
         settings: {
           optimizer: {
             enabled: true,
             runs: 200
           }
-        },
+        }
+      },
+      {
+        version: '0.7.5',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: '0.5.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       }
     ]
-  },
+  }
 }
-
