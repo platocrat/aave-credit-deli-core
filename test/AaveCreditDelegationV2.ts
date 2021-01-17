@@ -155,29 +155,29 @@ describe('AaveCreditDelegationV2', () => {
     })
   })
 
-  /** 
-   * @dev Approving the delegation for the borrower to use the delegated credit
-   */
-  describe("after approving borrower for 50% of delegator's deposit amount", async () => {
-    before(async () => {
-      /**
-       * @dev Can only call higher-order variables and functions under child
-       * `before()` statements!
-       */
-      const ownerSigner = await hre.ethers.provider.getSigner(delegator)
+  // /** 
+  //  * @dev Approving the delegation for the borrower to use the delegated credit
+  //  */
+  // describe("after approving borrower for 50% of delegator's deposit amount", async () => {
+  //   before(async () => {
+  //     /**
+  //      * @dev Can only call higher-order variables and functions under child
+  //      * `before()` statements!
+  //      */
+  //     const ownerSigner = await hre.ethers.provider.getSigner(delegator)
 
-      await aaveCreditDelegationV2.connect(ownerSigner).approveBorrower(
-        // address borrower
-        delegatee,
-        // test borrowing of full `depositAmount` and varying amounts of it
-        depositAmount * 0.5,
-        // address asset
-        daiAddress
-      )
-    })
+  //     await aaveCreditDelegationV2.connect(ownerSigner).approveBorrower(
+  //       // address borrower
+  //       delegatee,
+  //       // test borrowing of full `depositAmount` and varying amounts of it
+  //       depositAmount * 0.5,
+  //       // address asset
+  //       daiAddress
+  //     )
+  //   })
 
-    it('repay the borrower', async () => {
-      await aaveCreditDelegationV2.
-    })
-  })
+  //   it('repay the borrower', async () => {
+  //     await aaveCreditDelegationV2.
+  //   })
+  // })
 })
