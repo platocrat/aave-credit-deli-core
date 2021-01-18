@@ -1,6 +1,6 @@
 # 🥪 aave-credit-deli-core 🥪
 
-Core smart contracts for the `aave-credit-deli-interface`.
+Core smart contracts for the [`aave-credit-deli-interface`](https://github.com/platocrat/aave-credit-dele-interface).
 
 ## 📄 Description
 
