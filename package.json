@@ -1,9 +1,9 @@
 {
-  "name": "aave-credit-dele-core",
+  "name": "aave-credit-deli-core",
   "version": "0.1.0",
-  "description": "Smart contracts for the Aave native credit \"delicatessen\".",
+  "description": "Core smart contracts for the `aave-credit-deli-interface`.",
   "main": "index.js",
-  "repository": "https://github.com/platocrat/aave-credit-dele-core.git",
+  "repository": "https://github.com/platocrat/aave-credit-deli-core.git",
   "author": "platocrat [platocrat@tuta.io]",
   "license": "MIT",
   "dependencies": {
