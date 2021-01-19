@@ -76,16 +76,16 @@ contract AaveCreditDelegationV2 {
 
         // `canPull` is a boolean value is set by calling `setCanPullFundsFromCaller()`
         if (canPullFundsFromCaller) {
-            IERC20(asset).safeTransferFrom(
+            IERC20(_asset).safeTransferFrom(
                 msg.sender,
                 address(this),
-                depositAmount
+                _depositAmount
             );
         }
 
-        // Approve Aave lending pool for deposit, then deposit `depositAmount`
-        IERC20(asset).safeApprove(address(lendingPool), depositAmount);
-        lendingPool.deposit(asset, depositAmount, address(this), 0);
+        // Approve Aave lending pool for deposit, then deposit `_depositAmount`
+        IERC20(_asset).safeApprove(address(lendingPool), _depositAmount);
+        lendingPool.deposit(_asset, _depositAmount, address(this), 0);
     }
 
     /**
@@ -183,6 +183,6 @@ contract AaveCreditDelegationV2 {
             dataProvider.getReserveTokensAddresses(_asset);
         uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
 
-        _lendingPool.withdraw(_asset, assetBalance, delegator);
+        lendingPool.withdraw(_asset, assetBalance, delegator);
     }
 }
