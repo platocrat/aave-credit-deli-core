@@ -66,16 +66,16 @@ describe('AaveCreditDelegationV2', () => {
 
     await aaveCreditDelegationV2.deployed()
 
-    /**
-     * @dev 
-     * Just for your knowledge the await method is fine to call. Since write 
-     * methods return contract transactions unlike read methods which will
-     * return balance for example after calling contract.balanceOf() we can 
-     * ignore the await if we are not going to be unfwapping the contract
-     * transaction object returned in a promise.
-     */
   })
 
+  /**
+   * @dev 
+   * Just for your knowledge the await method is fine to call. Since write 
+   * methods return contract transactions unlike read methods which will
+   * return balance for example after calling contract.balanceOf() we can 
+   * ignore the await if we are not going to be unfwapping the contract
+   * transaction object returned in a promise.
+   */
 
   /** 
    * @dev Test when the delegator sets `canPull` to `true`
@@ -113,6 +113,7 @@ describe('AaveCreditDelegationV2', () => {
 
   /** 
    * @dev Test when the delegator sets `canPull` to `false`
+   * @notice PASSES
    */
   describe("deposit collateral with contract's funds", async () => {
     let balanceBefore: BigNumber
@@ -155,10 +156,34 @@ describe('AaveCreditDelegationV2', () => {
     })
   })
 
-  // /** 
-  //  * @dev Approving the delegation for the borrower to use the delegated credit
-  //  */
-  // describe("after approving borrower for 50% of delegator's deposit amount", async () => {
+  /** 
+   * @dev Approving the delegation for the borrower to use the delegated credit
+   * @notice FAILS
+   */
+  describe("after approving borrower for 50% of delegator's deposit amount", async () => {
+    before(async () => {
+      /**
+       * @dev Can only call higher-order variables and functions under child
+       * `before()` statements!
+       */
+      const ownerSigner = await hre.ethers.provider.getSigner(delegator)
+
+      await aaveCreditDelegationV2.connect(ownerSigner).approveBorrower(
+        // address borrower
+        delegatee,
+        // test borrowing of full `depositAmount` and varying amounts of it
+        depositAmount * 0.5,
+        // address asset
+        daiAddress
+      )
+    })
+
+    it('repay the borrower', async () => {
+      await aaveCreditDelegationV2.
+    })
+  })
+
+  // describe("after approving borrower for 100% of delegator's deposit amount", async () => {
   //   before(async () => {
   //     /**
   //      * @dev Can only call higher-order variables and functions under child
@@ -170,7 +195,7 @@ describe('AaveCreditDelegationV2', () => {
   //       // address borrower
   //       delegatee,
   //       // test borrowing of full `depositAmount` and varying amounts of it
-  //       depositAmount * 0.5,
+  //       depositAmount,
   //       // address asset
   //       daiAddress
   //     )
