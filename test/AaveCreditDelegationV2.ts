@@ -58,7 +58,7 @@ describe('AaveCreditDelegationV2', () => {
 
     // Create CD contract
     const AaveCreditDelegationV2 = await hre.ethers.getContractFactory(
-      'aaveCreditDelegationV2',
+      'AaveCreditDelegationV2',
       depositorSigner
     )
 
