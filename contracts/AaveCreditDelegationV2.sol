@@ -173,7 +173,7 @@ contract AaveCreditDelegationV2 {
     /**
      * Withdraw all of a collateral as the underlying asset, if no outstanding
      * loans delegated.
-     * @param asset The underlying asset to withdraw.
+     * @param _asset The underlying asset to withdraw.
      */
     function withdrawCollateral(address _asset) public {
         // Only the delegator should be able to withdraw their collateral!
