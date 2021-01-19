@@ -126,6 +126,13 @@ contract AaveCreditDelegationV2 {
         delegatees.push(_borrower);
     }
 
+    /**
+     * @dev -------------------------- TODO ---------------------------------
+     * Let a borrower borrow an amount that was lended to them from the delegator
+     * ----------------------------------------------------------------------
+     */
+    function borrowFromPool() {}
+
     // /**
     //  * Repay an uncollaterised loan (for use by approved borrowers). Approved
     //  * borrowers must have approved this contract, a priori, with an allowance
