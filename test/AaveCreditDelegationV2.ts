@@ -84,7 +84,7 @@ describe('AaveCreditDelegationV2', () => {
   describe("deposit collateral with delegator's funds", async () => {
     let balanceBefore: BigNumber
 
-    const canPull: boolean = true
+    const canPullFundsFromCaller: boolean = true
 
     before(async () => {
       balanceBefore = await dai.balanceOf(delegator)
@@ -96,12 +96,11 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     it('delegator should have 100 less DAI after depositing collateral', async () => {
-      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPull)
+      // User approves this contract to pull funds from his/her account
+      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPullFundsFromCaller)
       await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
-        // User approves this contract to pull funds from his/her account
-        canPull
       )
 
       const balanceAfter: BigNumber = await dai.balanceOf(delegator)
@@ -118,7 +117,7 @@ describe('AaveCreditDelegationV2', () => {
   describe("deposit collateral with contract's funds", async () => {
     let balanceBefore: BigNumber
 
-    const canPull: boolean = false
+    const canPullFundsFromCaller: boolean = false
 
     before(async () => {
       /**
@@ -141,12 +140,11 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     it('contract should have 100 less DAI after depositing collateral', async () => {
-      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPull)
+      // User approves this contract to pull funds from his/her account
+      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPullFundsFromCaller)
       await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
-        // User approves this contract to pull funds from his/her account
-        canPull
       )
 
       const balanceAfterDepositingCollateral: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
