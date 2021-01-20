@@ -29,7 +29,6 @@ contract AaveCreditDelegationV2 {
     bool canPullFundsFromCaller;
     // Used to track approved borrowers/delegatees addresses
     mapping(address => bool) approvedToBorrow;
-    address delegatee;
     // Used to select a delegatee to repay an uncollateralized loan
     address[] delegatees;
     /**
@@ -106,8 +105,6 @@ contract AaveCreditDelegationV2 {
             "Only the delegator (contract creator) can approve borrowers!"
         );
 
-        delegatee = _borrower;
-
         /**
          * @dev -------------------------- TODO --------------------------------
          * MUST CHECK FOR WHETHER STABLE OR VARIABLE TOKEN
@@ -122,16 +119,43 @@ contract AaveCreditDelegationV2 {
 
         // Track approved borrowers
         approvedToBorrow[_borrower] = true;
-        // Used t delegatee to repay uncollateralized loan in `repayBorrower()`
+        // Used to delegatee to repay uncollateralized loan in `repayBorrower()`
         delegatees.push(_borrower);
     }
 
     /**
      * @dev -------------------------- TODO ---------------------------------
-     * Let a borrower borrow an amount that was lended to them from the delegator
+     * Let the borrower borrow an amount that was lended to them from the delegator
      * ----------------------------------------------------------------------
+     * @param _assetToBorrow         The address for the asset.
+     * @param _amountToBorrowInWei   Require <= amount delegated to borrower.
+     * @param _interestRateMode      Require == type of debt delegated token
+     * @param _referralCode          If no referral code, == `0`
+     * @param _delegatorAddress
      */
-    function borrowFromPool() {}
+    function borrowFromAaveLendingPool(
+        address _assetToBorrow,
+        uint256 _amountToBorrow,
+        uint256 _interestRateMode,
+        uint16 _referralCode,
+        address _delegatorAddress
+    ) public {
+        // Only a delegatee can call borrow from the Aave lending pool!
+        require(
+            approvedToBorrow[msg.sender],
+            "Only a delegatee can borrow from the Aave lending pool!"
+        );
+
+        _delegatorAddress = delegator;
+
+        lendingPool.borrow(
+            _assetToBorrow,
+            _amountToBorrow,
+            _interestRateMode,
+            _referralCode,
+            _delegatorAddress
+        );
+    }
 
     // /**
     //  * Repay an uncollaterised loan (for use by approved borrowers). Approved
