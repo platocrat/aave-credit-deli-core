@@ -23,8 +23,9 @@ describe('AaveCreditDelegationV2', () => {
     approvedToBorrow: boolean[],
     dai: Dai
 
-  const depositAmount: number = 1_000
+  const depositAmount: number = 10_000
   const daiAddress: string = '0x6b175474e89094c44da98b954eedeac495271d0f'
+  
   const lendingPoolAddress: string = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9'
 
   before(async () => {
@@ -34,7 +35,7 @@ describe('AaveCreditDelegationV2', () => {
     /**
      * @todo -------------------------- TODO ---------------------------------
      * NOTE: delegator address is instantiated when contract at creation.
-     
+     *
      * The goal of `AaveCreditDelegationV2.sol` is to be a generalized contract
      * that can be deployed once and used by any wishing delegators wanting to
      * deposit collateral into the Aave lending pool to then delegate their 
@@ -84,7 +85,6 @@ describe('AaveCreditDelegationV2', () => {
     aaveCreditDelegationV2 = await AaveCreditDelegationV2.deploy()
 
     await aaveCreditDelegationV2.deployed()
-
   })
 
   /**
@@ -92,14 +92,11 @@ describe('AaveCreditDelegationV2', () => {
    * Just for your knowledge the await method is fine to call. Since write 
    * methods return contract transactions unlike read methods which will
    * return balance for example after calling contract.balanceOf() we can 
-   * ignore the await if we are not going to be unfwapping the contract
+   * ignore the await if we are not going to be unwapping the contract
    * transaction object returned in a promise.
    */
 
-  /** 
-   * @dev Test when the delegator sets `canPull` to `true`
-   * @notice PASSES
-   */
+  /** @notice PASSES */
   describe("deposit collateral with delegator's funds", async () => {
     let balanceBefore: BigNumber
 
@@ -114,7 +111,7 @@ describe('AaveCreditDelegationV2', () => {
       expect(balanceBefore.toString()).to.equal('5000000000000000000')
     })
 
-    it('delegator should have 1,000 less DAI after depositing collateral', async () => {
+    it('delegator should have 10,000 less DAI after depositing collateral', async () => {
       // User approves this contract to pull funds from his/her account
       await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPullFundsFromCaller)
       await aaveCreditDelegationV2.depositCollateral(
@@ -125,7 +122,7 @@ describe('AaveCreditDelegationV2', () => {
       const balanceAfter: BigNumber = await dai.balanceOf(delegator)
       const diff: BigNumber = balanceBefore.sub(balanceAfter)
 
-      expect(diff.toString()).to.equal("1000")
+      expect(diff.toString()).to.equal("10000")
     })
   })
 
@@ -139,14 +136,14 @@ describe('AaveCreditDelegationV2', () => {
     const canPullFundsFromCaller: boolean = false
 
     before(async () => {
+      balanceBefore = await dai.balanceOf(aaveCreditDelegationV2.address)
+
       /**
        * @dev Send 200 DAI from CompoundDai contract to CD contract address
        */
-      balanceBefore = await dai.balanceOf(aaveCreditDelegationV2.address)
-
       await dai.transfer(
         aaveCreditDelegationV2.address,
-        hre.ethers.utils.parseUnits('2000', 'wei')
+        hre.ethers.utils.parseUnits('20000', 'wei')
       )
     })
 
@@ -155,10 +152,10 @@ describe('AaveCreditDelegationV2', () => {
       const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
       const diff: BigNumber = balanceAfterReceivingDAI.sub(balanceBefore)
 
-      expect(diff.toString()).to.equal('2000')
+      expect(diff.toString()).to.equal('20000')
     })
 
-    it('contract should have 1,000 less DAI after depositing collateral', async () => {
+    it('contract should have 10,000 less DAI after depositing collateral', async () => {
       // User approves this contract to pull funds from his/her account
       await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPullFundsFromCaller)
       await aaveCreditDelegationV2.depositCollateral(
@@ -169,7 +166,7 @@ describe('AaveCreditDelegationV2', () => {
       const balanceAfterDepositingCollateral: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
       const diff: BigNumber = balanceAfterDepositingCollateral.sub(balanceBefore)
 
-      expect(diff.toString()).to.equal("1000")
+      expect(diff.toString()).to.equal("10000")
     })
   })
 
