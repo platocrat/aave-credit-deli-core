@@ -1,6 +1,7 @@
 # ------ Project Specific ------
 test/sample-test.ts
 contracts/Greeter.sol
+contracts/dai.sol
 .yarn/plugins/*
 MarketMake-workshop-notes
 
