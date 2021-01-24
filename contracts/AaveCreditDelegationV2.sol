@@ -9,73 +9,82 @@ import {
 } from "./Interfaces.sol";
 import {SafeERC20} from "./Libraries.sol";
 
-// struct IndexValue {
-//     uint256 keyIndex;
-//     uint256 value;
-// }
+// ~~~~~~~~~~~~~~~~~~~~~~~~  CD struct functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// struct KeyFlag {
-//     uint256 key;
-//     bool deleted;
-// }
+/**
+ * @dev Structs taken from IterableMapping example in Solidity docs:
+ * https://docs.soliditylang.org/en/v0.8.0/types.html#operators-involving-lvalues
+ */
+struct KeyFlag {
+    uint256 key;
+    bool isDelegator;
+}
 
-// struct itmap {
-//     mapping(uint256 => IndexValue) data;
-//     KeyFlag[] keys;
-//     uint256 size;
-// }
+struct CreditDelegation {
+    address delegatee; // address of borrower with an uncollateralized loan
+    uint256 creditLine; // limit of total debt
+    uint256 debt; // debt this borrower owes to the delegator
+    bool exists; // does this credit delegation exist?
+}
 
-// // Iterate over this data structure as an alternative to iterating over a
-// // mapping (you cannot iterate over mappings).
-// library IterableMapping {
-//     /**
-//      * @dev Change the value of a key of the `data` struct-field of the `itmap`
-//      * struct.
-//      * ----------------------------------------------------------------------
-//      */
-//     function insert(
-//         itmap storage _self,
-//         uint256 _key, // `itmap` key
-//         uint256 _value // `itmap` value
-//     ) internal returns (bool replaced) {
-//         uint256 keyIndex = _self.data[_key].keyIndex;
-//         _self.data[_key].value = _value;
+/**
+ * @dev -------------------------- TODO ---------------------------------
+ * Add the proper functions for this CD iterable mapping under its respective
+ * library
+ * ----------------------------------------------------------------------
+ */
+struct IMCreditDelegation {
+    // Records the approved delegatees of each delegator.
+    mapping(address => CreditDelegation[]) Creditors;
+    KeyFlag[] keys;
+    uint256 size;
+}
 
-//         if (keyIndex > 0) {
-//             return true;
-//         } else {
-//             keyIndex = _self.keys.length;
+/**
+ * @dev "IM" stands for "IterableMapping"
+ */
+library IMCreditDelegation {
+    /**
+     * @dev Call this function **after** when the delegator approves a borrower
+     */
+    function addBorrower(
+        address _delegator,
+        address _delegatee,
+        address _debt
+    ) public returns (bool success) {
+        Creditors memory currentDelegation;
 
-//             _self.keys.push();
-//             _self.data[key].keyIndex = keyIndex + 1;
-//             _self.keys[keyIndex].key = _key;
-//             _self.size++;
+        currentDelegation.exists = true;
+        currentDelegation.delegatee = _delegatee;
+        currentDelegation.debt = _debt;
 
-//             return false;
-//         }
-//     }
+        Creditors[_delegator].push(currentDelegation);
 
-//     function remove(itmap storage _self, uint256 _key)
-//         internal
-//         returns (bool success)
-//     {
-//         uint256 keyIndex = _self.data[_key].keyIndex;
+        return true;
+    }
 
-//         // data does not exist for this key -- see `contains()` below for more
-//         // details
-//         if (keyIndex == 0) return false;
+    /**
+     * @dev -------------------------- TODO ---------------------------------
+     * Allow a function caller to view all debt owed to one delegator.
+     * ----------------------------------------------------------------------
+     */
+    function getBorrowerDebtOwedToDelegator(address _delegator)
+        public
+        view
+    // address _delegatee
+    {
+        /** @dev This may be costly */
+        for (uint256 i = 0; i < Creditors[_delegator].length; i++) {
+            require(
+                Creditors[_delegator][i].exists,
+                "This delegation does not yet exist!"
+            );
 
-//         // delete key from `data` field of `itmap` struct
-//         delete _self.data[_key];
-
-//         _self.keys[keyIndex - 1].deleted = true; // mark deleted index as deleted
-//         _self.size -= 1; // decrement size of `itmap` struct
-//     }
-
-//     function contains(itmap storage _self, uint _key) internal view returns (bool) {
-//         return _self.data[_key].keyIndex > 0;
-//     })
-// }
+            // if (Creditors[_delegator][i].delegatee == _delegatee)
+            //     return Creditors[_delegator][i].debt;
+        }
+    }
+}
 
 /**
  * This is a proof of concept starter contract, showing how uncollaterised loans are possible
@@ -89,16 +98,23 @@ import {SafeERC20} from "./Libraries.sol";
  * -----------------------------------------------------------------------------
  */
 contract AaveCreditDelegationV2 {
+    
+
     using SafeERC20 for IERC20;
 
-    // ---------- State variables ----------
     address contractOwner;
-    address delegator;
+
+    constructor() public {
+        contractOwner = msg.sender;
+    }
+
+    // ---------- State variables ----------
     bool canPullFundsFromCaller;
-    // Used to track approved borrowers/delegatees addresses
-    mapping(address => bool) approvedToBorrow;
-    // Used to select a delegatee to repay an uncollateralized loan
-    address[] delegatees;
+    // Track addresses of borrowers (delegatees)
+    mapping(address => bool) isBorrower;
+    // // Used to select a delegatee to repay an uncollateralized loan
+    // address[] delegatees;
+
     /**
      * @dev -------------------------- TODO ---------------------------------
      * Used to track allowances (loan amounts) for each borrower/delegatee
@@ -109,50 +125,9 @@ contract AaveCreditDelegationV2 {
     mapping(address => mapping(address => uint256)) private borrowerAllowances;
 
     /**
-     * @dev -------------------------- TODO --------------------------------
-     * Each delegator address is mapped to a list of addresses of delegatees
-     * whom the delegator has approved with a delegated line of credit.
-     *
-     * in JavaScript:
-     *     CreditDelegation = {
-     *         delegator1: [ delegatee1, delegatee2, ... ],
-     *         delegator2: [ delegatee1, delegatee2, ... ],
-     *         .
-     *         .
-     *         .
-     *         delegator_N: [ ..., delegatee_N ]
-     *
-     *     }
-     * ---------------------------------------------------------------------
+     * @dev Change these addresses to Mainnet addresses when testing with forked
+     * networks in hardhat. Use Kovan when testing UI.
      */
-    // Records the approved delegatees of each delegator.
-    struct CreditDelegation {
-        address delegator;
-        address[] delegatees;
-        // KEEP THIS STRUCT SIMPLE FOR NOW (`_debt` can later be added to both
-        // `delegator` and `delegatee` in their own structs).
-        // uint256 _debt;
-    }
-
-    mapping(address => CreditDelegation[]) Creditors;
-
-    function addDelegator(
-        address _delegator,
-        address _delegatee,
-        address,
-        address _debt
-    ) public returns (bool success) {
-        Creditors memory currentEntry;
-
-        currentEntry.delegator = _delegator;
-        currentEntry.delegatees.push(_delegatee);
-
-        Creditors[_delegator].push(currentEntry);
-
-        return true;
-    }
-
-    // CHANGE KOVAN ADDRESSES TO MAINNET ADDRESSES
     ILendingPool constant lendingPool =
         ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
     IProtocolDataProvider constant dataProvider =
@@ -160,30 +135,30 @@ contract AaveCreditDelegationV2 {
             address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)
         ); // Mainnet
 
-    constructor() public {
-        contractOwner = msg.sender;
-    }
+    // ~~~~~~~~~~~~~~~~~~~~~~  Core contract functions  ~~~~~~~~~~~~~~~~~~~~~~~~
 
-    /**
-     * Sets `canPullFundsFromCaller`. This would be called by the delegator.
-     * @param _canPullFundsFromCaller Whether to pull the funds from the caller,
-     * or use funds sent to this contract.
-     */
-    function setCanPullFundsFromCaller(bool _canPullFundsFromCaller) public {
-        canPullFundsFromCaller = _canPullFundsFromCaller;
-    }
+    event Deposit(
+        address indexed asset,
+        address indexed user,
+        uint256 depositAmount
+    );
 
     /**
      * Deposits collateral into Aave lending pool to enable credit delegation.
      * @notice User must have approved this contract to pull funds with a call
-     * to the `setCanPullFundsFromCaller()` function above.
-     * @param _asset The asset to be deposited as collateral.
-     * @param _depositAmount The amount to be deposited as collateral.
+     *         to the `setCanPullFundsFromCaller()` function above.
+     * @param _asset                  The asset to be deposited as collateral.
+     * @param _depositAmount          The amount to be deposited as collateral.
+     * @param _canPullFundsFromCaller Boolean value set by user on UI.
      */
-    function depositCollateral(address _asset, uint256 _depositAmount) public {
+    function depositCollateral(
+        address _asset,
+        uint256 _depositAmount,
+        bool _canPullFundsFromCaller // Ensure that this value is set client-side
+    ) public {
         // Ensure that this function is only called by the delegator.
         require(
-            approvedToBorrow[msg.sender] == false,
+            isBorrower[msg.sender] == false,
             "Only a delegator can deposit collateral!"
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
@@ -201,23 +176,33 @@ contract AaveCreditDelegationV2 {
         // Approve Aave lending pool for deposit, then deposit `_depositAmount`
         IERC20(_asset).safeApprove(address(lendingPool), _depositAmount);
         lendingPool.deposit(_asset, _depositAmount, address(this), 0);
+
+        // Fetch this event client-side
+        emit Deposit(_asset, msg.sender, _depositAmount);
     }
+
+    event CreditApproval(
+        address indexed delegator,
+        address indexed delegatee,
+        uint256 credit,
+        address asset
+    );
 
     /**
      * Approves a borrower to take an uncollaterised loan.
-     * @param _borrower The borrower of the funds (i.e. delegatee).
-     * @param _borrowAmount The amount the borrower is allowed to borrow (i.e.
-     * their line of credit).
-     * @param _asset The asset they are allowed to borrow.
+     * @param _delegatee    The borrower of the funds.
+     * @param _credit       The amount the borrower is allowed to borrow (i.e.
+     *                      their line of credit).
+     * @param _asset        The asset they are allowed to borrow.
      */
     function approveBorrower(
-        address _borrower,
-        uint256 _borrowAmount,
+        address _delegatee,
+        uint256 _credit,
         address _asset
     ) public {
         // Only a delegator should be able to approve borrowers!
         require(
-            !approvedToBorrow[msg.sender],
+            !isBorrower[msg.sender],
             "Only a delegator can approve borrowers. Delegators cannot borrow!"
         );
 
@@ -229,15 +214,23 @@ contract AaveCreditDelegationV2 {
         (, address stableDebtTokenAddress, ) =
             dataProvider.getReserveTokensAddresses(_asset);
         IStableDebtToken(stableDebtTokenAddress).approveDelegation(
-            _borrower,
-            _borrowAmount
+            _delegatee,
+            _credit
         );
 
         // Track approved borrowers.
-        approvedToBorrow[_borrower] = true;
+        isBorrower[_delegatee] = true;
+        
+        /**
+         * @dev -------------------------- TODO --------------------------------
+         * What to do with `success` boolean value?
+         * ---------------------------------------------------------------------
+         */
         // Used to select a delegatee to repay an uncollateralized loan in the
         // `repayBorrower()` function.
-        delegatees.push(_borrower);
+        addBorrower(msg.sender, _delegatee, _debt);
+
+        emit CreditApproval(_)
     }
 
     /**
@@ -259,9 +252,30 @@ contract AaveCreditDelegationV2 {
     ) public {
         // Only a delegatee can call borrow from the Aave lending pool!
         require(
-            approvedToBorrow[msg.sender],
+            isBorrower[msg.sender],
             "Only a delegatee can borrow from the Aave lending pool. \n Delegators cannot borrow!"
         );
+
+        // If the address of `msg.sender` exists in the mapping of`Creditors`, set
+        // the `msg.sender` to `_delegator`.
+        // structs
+        for (uint256 i = 0; i < Creditors.length; i++) {
+            require(
+                /**
+                 * @dev -------------------  TODO  -----------------------------
+                 * Need a better way to check that the address of `msg.sender`
+                 * exists as a delegator in the mapping of `Creditors`.
+                 *
+                 * Try revisiting the example of the `IterableMapping` library.
+                 * -------------------------------------------------------------
+                 */
+                Creditors[msg.sender] == true,
+                "This delegation does not yet exist!"
+            );
+
+            if (Creditors[_delegator][i].delegatee == _delegatee)
+                return Creditors[_delegator][i].debt;
+        }
 
         _delegatorAddress = delegator;
 
@@ -293,7 +307,7 @@ contract AaveCreditDelegationV2 {
      */
     function repayBorrower(uint256 _repayAmount, address _asset) public {
         require(
-            approvedToBorrow[msg.sender] == true,
+            isBorrower[msg.sender] == true,
             "Only approved borrowers can repay an uncollateralized loan!"
         );
         /**
@@ -326,7 +340,7 @@ contract AaveCreditDelegationV2 {
     function withdrawCollateral(address _asset) public {
         // Only a delegator should be able to withdraw their collateral!
         require(
-            !approvedToBorrow[msg.sender],
+            !isBorrower[msg.sender],
             "Only a delegator should be able to withdraw their collateral!"
         );
         // Only if no outstanding loans delegated

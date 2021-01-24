@@ -25,7 +25,7 @@ describe('AaveCreditDelegationV2', () => {
 
   const depositAmount: number = 10_000
   const daiAddress: string = '0x6b175474e89094c44da98b954eedeac495271d0f'
-  
+
   const lendingPoolAddress: string = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9'
 
   before(async () => {
@@ -98,9 +98,12 @@ describe('AaveCreditDelegationV2', () => {
 
   /** @notice PASSES */
   describe("deposit collateral with delegator's funds", async () => {
-    let balanceBefore: BigNumber
+    let balanceBefore: BigNumber,
+      canPullFundsFromCaller: boolean
 
-    const canPullFundsFromCaller: boolean = true
+    function setCanPullFundsFromCaller(_canPull: boolean) {
+      canPullFundsFromCaller = _canPull
+    }
 
     before(async () => {
       balanceBefore = await dai.balanceOf(delegator)
@@ -112,11 +115,14 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     it('delegator should have 10,000 less DAI after depositing collateral', async () => {
-      // User approves this contract to pull funds from his/her account
-      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPullFundsFromCaller)
+      // 1. User approves this contract to pull funds from his/her account.
+      setCanPullFundsFromCaller(true)
+
+      // 2. The same user then deposits collateral into Aave lending pool.
       await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
+        canPullFundsFromCaller
       )
 
       const balanceAfter: BigNumber = await dai.balanceOf(delegator)
