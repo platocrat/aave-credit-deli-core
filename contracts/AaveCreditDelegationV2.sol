@@ -9,73 +9,73 @@ import {
 } from "./Interfaces.sol";
 import {SafeERC20} from "./Libraries.sol";
 
-struct IndexValue {
-    uint256 keyIndex;
-    uint256 value;
-}
+// struct IndexValue {
+//     uint256 keyIndex;
+//     uint256 value;
+// }
 
-struct KeyFlag {
-    uint256 key;
-    bool deleted;
-}
+// struct KeyFlag {
+//     uint256 key;
+//     bool deleted;
+// }
 
-struct itmap {
-    mapping(uint256 => IndexValue) data;
-    KeyFlag[] keys;
-    uint256 size;
-}
+// struct itmap {
+//     mapping(uint256 => IndexValue) data;
+//     KeyFlag[] keys;
+//     uint256 size;
+// }
 
-// Iterate over this data structure as an alternative to iterating over a
-// mapping (you cannot iterate over mappings).
-library IterableMapping {
-    /**
-     * @dev -------------------------- TODO ---------------------------------
-     * Comment this function!
-     * ----------------------------------------------------------------------
-     */
-    function insert(
-        itmap storage _self,
-        uint256 _key,
-        uint256 _value
-    ) internal returns (bool replaced) {
-        uint256 keyIndex = _self.data[_key].keyIndex;
-        _self.data[_key].value = _value;
+// // Iterate over this data structure as an alternative to iterating over a
+// // mapping (you cannot iterate over mappings).
+// library IterableMapping {
+//     /**
+//      * @dev Change the value of a key of the `data` struct-field of the `itmap`
+//      * struct.
+//      * ----------------------------------------------------------------------
+//      */
+//     function insert(
+//         itmap storage _self,
+//         uint256 _key, // `itmap` key
+//         uint256 _value // `itmap` value
+//     ) internal returns (bool replaced) {
+//         uint256 keyIndex = _self.data[_key].keyIndex;
+//         _self.data[_key].value = _value;
 
-        if (keyIndex > 0) {
-            return true;
-        } else {
-            keyIndex = _self.keys.length;
+//         if (keyIndex > 0) {
+//             return true;
+//         } else {
+//             keyIndex = _self.keys.length;
 
-            _self.keys.push();
-            _self.data[key].keyIndex = keyIndex + 1;
-            _self.keys[keyIndex].key = _key;
-            _self.size++;
+//             _self.keys.push();
+//             _self.data[key].keyIndex = keyIndex + 1;
+//             _self.keys[keyIndex].key = _key;
+//             _self.size++;
 
-            return false;
-        }
-    }
+//             return false;
+//         }
+//     }
 
-    function remove(itmap storage _self, uint256 _key)
-        internal
-        returns (bool success)
-    {
-        uint256 keyIndex = _self.data[_key].keyIndex;
+//     function remove(itmap storage _self, uint256 _key)
+//         internal
+//         returns (bool success)
+//     {
+//         uint256 keyIndex = _self.data[_key].keyIndex;
 
-        // data does not exist for this key -- see `contains()` below for more
-        // details
-        if (keyIndex == 0) return false;
+//         // data does not exist for this key -- see `contains()` below for more
+//         // details
+//         if (keyIndex == 0) return false;
 
-        // delete key from `data` field of `itmap` struct
-        delete _self.data[_key];
+//         // delete key from `data` field of `itmap` struct
+//         delete _self.data[_key];
 
-        _self.keys[keyIndex - 1].deleted = true; // mark deleted index as deleted
-        _self.size -= 1; // decrement size of `itmap` struct
-    }
+//         _self.keys[keyIndex - 1].deleted = true; // mark deleted index as deleted
+//         _self.size -= 1; // decrement size of `itmap` struct
+//     }
 
-    function contains(itmap storage _self, uint _key) internal view returns (bool) {
-        return _self.data[_key].keyIndex > 0;
-    })
-}
+//     function contains(itmap storage _self, uint _key) internal view returns (bool) {
+//         return _self.data[_key].keyIndex > 0;
+//     })
+// }
 
 /**
  * This is a proof of concept starter contract, showing how uncollaterised loans are possible
@@ -107,8 +107,50 @@ contract AaveCreditDelegationV2 {
     // Records the amount (`uint256`) the delegatee (`address`) is
     // allowed to withdraw from the delegator's account (`address`).
     mapping(address => mapping(address => uint256)) private borrowerAllowances;
-    // Records which delegator has approved delegatees
-    mapping(address => address[]) private delegateeDelegators;
+
+    /**
+     * @dev -------------------------- TODO --------------------------------
+     * Each delegator address is mapped to a list of addresses of delegatees
+     * whom the delegator has approved with a delegated line of credit.
+     *
+     * in JavaScript:
+     *     CreditDelegation = {
+     *         delegator1: [ delegatee1, delegatee2, ... ],
+     *         delegator2: [ delegatee1, delegatee2, ... ],
+     *         .
+     *         .
+     *         .
+     *         delegator_N: [ ..., delegatee_N ]
+     *
+     *     }
+     * ---------------------------------------------------------------------
+     */
+    // Records the approved delegatees of each delegator.
+    struct CreditDelegation {
+        address delegator;
+        address[] delegatees;
+        // KEEP THIS STRUCT SIMPLE FOR NOW (`_debt` can later be added to both
+        // `delegator` and `delegatee` in their own structs).
+        // uint256 _debt;
+    }
+
+    mapping(address => CreditDelegation[]) Creditors;
+
+    function addDelegator(
+        address _delegator,
+        address _delegatee,
+        address,
+        address _debt
+    ) public returns (bool success) {
+        Creditors memory currentEntry;
+
+        currentEntry.delegator = _delegator;
+        currentEntry.delegatees.push(_delegatee);
+
+        Creditors[_delegator].push(currentEntry);
+
+        return true;
+    }
 
     // CHANGE KOVAN ADDRESSES TO MAINNET ADDRESSES
     ILendingPool constant lendingPool =
