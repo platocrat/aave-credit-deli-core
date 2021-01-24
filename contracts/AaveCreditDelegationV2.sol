@@ -43,7 +43,7 @@ struct IMCreditDelegation {
 /**
  * @dev "IM" stands for "IterableMapping"
  */
-library IMCreditDelegation {
+library IMCreditDeli {
     /**
      * @dev Call this function **after** when the delegator approves a borrower
      */
@@ -68,22 +68,22 @@ library IMCreditDelegation {
      * Allow a function caller to view all debt owed to one delegator.
      * ----------------------------------------------------------------------
      */
-    function getBorrowerDebtOwedToDelegator(address _delegator)
-        public
-        view
-    // address _delegatee
-    {
-        /** @dev This may be costly */
-        for (uint256 i = 0; i < Creditors[_delegator].length; i++) {
-            require(
-                Creditors[_delegator][i].exists,
-                "This delegation does not yet exist!"
-            );
+    // function getBorrowerDebtOwedToDelegator(address _delegator)
+    //     public
+    //     view
+    // // address _delegatee
+    // {
+    //     /** @dev This may be costly */
+    //     for (uint256 i = 0; i < Creditors[_delegator].length; i++) {
+    //         require(
+    //             Creditors[_delegator][i].exists,
+    //             "This delegation does not yet exist!"
+    //         );
 
-            // if (Creditors[_delegator][i].delegatee == _delegatee)
-            //     return Creditors[_delegator][i].debt;
-        }
-    }
+    //         if (Creditors[_delegator][i].delegatee == _delegatee)
+    //             return Creditors[_delegator][i].debt;
+    //     }
+    // }
 }
 
 /**
@@ -98,8 +98,9 @@ library IMCreditDelegation {
  * -----------------------------------------------------------------------------
  */
 contract AaveCreditDelegationV2 {
-    
+    IMCreditDelegation aaveCDData;
 
+    using IMCreditDeli for IMCreditDelegation;
     using SafeERC20 for IERC20;
 
     address contractOwner;
@@ -143,6 +144,13 @@ contract AaveCreditDelegationV2 {
         uint256 depositAmount
     );
 
+    event CreditApproval(
+        address indexed delegator,
+        address indexed delegatee,
+        uint256 credit,
+        address asset
+    );
+
     /**
      * Deposits collateral into Aave lending pool to enable credit delegation.
      * @notice User must have approved this contract to pull funds with a call
@@ -181,13 +189,6 @@ contract AaveCreditDelegationV2 {
         emit Deposit(_asset, msg.sender, _depositAmount);
     }
 
-    event CreditApproval(
-        address indexed delegator,
-        address indexed delegatee,
-        uint256 credit,
-        address asset
-    );
-
     /**
      * Approves a borrower to take an uncollaterised loan.
      * @param _delegatee    The borrower of the funds.
@@ -220,7 +221,7 @@ contract AaveCreditDelegationV2 {
 
         // Track approved borrowers.
         isBorrower[_delegatee] = true;
-        
+
         /**
          * @dev -------------------------- TODO --------------------------------
          * What to do with `success` boolean value?
@@ -228,9 +229,9 @@ contract AaveCreditDelegationV2 {
          */
         // Used to select a delegatee to repay an uncollateralized loan in the
         // `repayBorrower()` function.
-        addBorrower(msg.sender, _delegatee, _debt);
+        aaveCDData.addBorrower(msg.sender, _delegatee, _debt);
 
-        emit CreditApproval(_)
+        emit CreditApproval(msg.sender, _delegatee, _credit, _asset);
     }
 
     /**
