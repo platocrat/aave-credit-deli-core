@@ -148,7 +148,16 @@ contract AaveCreditDelegationV2 {
         address indexed delegator,
         address indexed delegatee,
         uint256 credit,
-        address asset
+        address asset // address indexed asset
+    );
+
+    event Borrow(
+        address indexed delegatee,
+        address indexed delegator,
+        address assetToBorrow, // address indexed assetToBorrow,
+        uint256 amountToBorrow,
+        uint256 interestRateMode
+        // uint16 _referralCode
     );
 
     /**
@@ -236,20 +245,20 @@ contract AaveCreditDelegationV2 {
 
     /**
      * @dev -------------------------- TODO ---------------------------------
-     * Let the borrower borrow an amount that was lended to them from the delegator
+     * Let a borrower borrow an amount that was lended to them from a delegator
      * ----------------------------------------------------------------------
      * @param _assetToBorrow         The address for the asset.
      * @param _amountToBorrowInWei   Require <= amount delegated to borrower.
      * @param _interestRateMode      Require == type of debt delegated token
      * @param _referralCode          If no referral code, == `0`
-     * @param _delegatorAddress
+     * @param _delegator
      */
     function borrowFromAaveLendingPool(
         address _assetToBorrow,
         uint256 _amountToBorrow,
         uint256 _interestRateMode,
         uint16 _referralCode,
-        address _delegatorAddress
+        address _delegator
     ) public {
         // Only a delegatee can call borrow from the Aave lending pool!
         require(
@@ -257,35 +266,43 @@ contract AaveCreditDelegationV2 {
             "Only a delegatee can borrow from the Aave lending pool. \n Delegators cannot borrow!"
         );
 
-        // If the address of `msg.sender` exists in the mapping of`Creditors`, set
-        // the `msg.sender` to `_delegator`.
-        // structs
+        /**
+         * @dev -------------------  TODO  -----------------------------
+         * Need a better way to check that the address of `msg.sender`
+         * exists as a delegatee in the mapping of `Creditors`.
+         *
+         * If the address of `msg.sender` exists in the mapping of`Creditors`,
+         * set the `msg.sender` to `_delegatee`.
+         * -------------------------------------------------------------
+         */
         for (uint256 i = 0; i < Creditors.length; i++) {
             require(
-                /**
-                 * @dev -------------------  TODO  -----------------------------
-                 * Need a better way to check that the address of `msg.sender`
-                 * exists as a delegator in the mapping of `Creditors`.
-                 *
-                 * Try revisiting the example of the `IterableMapping` library.
-                 * -------------------------------------------------------------
-                 */
                 Creditors[msg.sender] == true,
-                "This delegation does not yet exist!"
+                "A delegator has not yet approved you for credit!"
             );
+
+            _delegatee = msg.sender;
 
             if (Creditors[_delegator][i].delegatee == _delegatee)
                 return Creditors[_delegator][i].debt;
         }
 
-        _delegatorAddress = delegator;
+        _delegator = delegator;
 
         lendingPool.borrow(
             _assetToBorrow,
             _amountToBorrow,
             _interestRateMode,
             _referralCode,
-            _delegatorAddress
+            _delegator
+        );
+
+        emit Borrow(
+            _delegatee,
+            _delegator,
+            _assetToBorrow,
+            _amountToBorrow,
+            _interestRateMode
         );
     }
 
@@ -294,7 +311,7 @@ contract AaveCreditDelegationV2 {
      * borrowers must have approved this contract, a priori, with an allowance
      * to transfer the tokens.
      * @param _repayAmount The amount to repay.
-     * @param _asset The asset to be repaid.
+     * @param _asset       The asset to be repaid.
      *
      * @dev -------------------------- TODO ------------------------------------
      * User calling this function must have approved this contract with an
