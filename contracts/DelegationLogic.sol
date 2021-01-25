@@ -10,15 +10,23 @@ import "./DelegationDataTypes.sol";
  * ----------------------------------------------------------------------
  */
 library DelegationLogic {
+    event DelegationDataUpdated(
+        address indexed delegator,
+        address indexed delegate, // address of borrower with an uncollateralized loan
+        uint256 creditLine, // limit of total debt
+        uint256 debt, // debt this borrower owes to the delegator
+        bool exists // does this credit delegation exist?
+    );
+
     using DelegationLogic for DelegationDataTypes.DelegationData;
 
     /**
      * @dev Call this function **after** when the delegator approves a borrower
      */
     function addBorrower(
-        IMCreditDelegation storage _self,
+        // IMCreditDelegation storage _self,
         address _delegator,
-        address _delegatee,
+        address _delegate,
         address _debt
     ) internal returns (bool success) {
         // uint256 keyIndex = _self.Creditors[_delegator].
@@ -26,7 +34,7 @@ library DelegationLogic {
         Creditors memory currentDelegation;
 
         currentDelegation.exists = true;
-        currentDelegation.delegatee = _delegatee;
+        currentDelegation.delegate = _delegate;
         currentDelegation.debt = _debt;
 
         Creditors[_delegator].push(currentDelegation);
@@ -42,7 +50,7 @@ library DelegationLogic {
     // function getBorrowerDebtOwedToDelegator(address _delegator)
     //     public
     //     view
-    // // address _delegatee
+    // // address _delegate
     // {
     //     /** @dev This may be costly */
     //     for (uint256 i = 0; i < Creditors[_delegator].length; i++) {
@@ -51,7 +59,7 @@ library DelegationLogic {
     //             "This delegation does not yet exist!"
     //         );
 
-    //         if (Creditors[_delegator][i].delegatee == _delegatee)
+    //         if (Creditors[_delegator][i].delegate == _delegate)
     //             return Creditors[_delegator][i].debt;
     //     }
     // }

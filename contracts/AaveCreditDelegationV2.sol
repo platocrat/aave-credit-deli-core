@@ -8,7 +8,9 @@ import {
     IStableDebtToken
 } from "./Interfaces.sol";
 import {SafeERC20} from "./Libraries.sol";
-import "./IMCreditDeli.sol";
+import { DelegationDataTypes } from "./DelegationDataTypes.sol";
+import { DelegationLogic } from "./DelegationLogic.sol";
+import { CreditDeliStorage } from "./CreditDeliStorage.sol";
 
 /**
  * This is a proof of concept starter contract, showing how uncollaterised loans are possible
@@ -35,17 +37,17 @@ contract AaveCreditDelegationV2 {
 
     // ---------- State variables ----------
     bool canPullFundsFromCaller;
-    // Track addresses of borrowers (delegatees)
+    // Track addresses of borrowers (delegates)
     mapping(address => bool) isBorrower;
-    // // Used to select a delegatee to repay an uncollateralized loan
-    // address[] delegatees;
+    // // Used to select a delegate to repay an uncollateralized loan
+    // address[] delegates;
 
     /**
      * @dev -------------------------- TODO ---------------------------------
-     * Used to track allowances (loan amounts) for each borrower/delegatee
+     * Used to track allowances (loan amounts) for each borrower/delegate
      * ----------------------------------------------------------------------
      */
-    // Records the amount (`uint256`) the delegatee (`address`) is
+    // Records the amount (`uint256`) the delegate (`address`) is
     // allowed to withdraw from the delegator's account (`address`).
     mapping(address => mapping(address => uint256)) private borrowerAllowances;
 
@@ -70,13 +72,13 @@ contract AaveCreditDelegationV2 {
 
     event CreditApproval(
         address indexed delegator,
-        address indexed delegatee,
+        address indexed delegate,
         uint256 credit,
         address asset // address indexed asset
     );
 
     event Borrow(
-        address indexed delegatee,
+        address indexed delegate,
         address indexed delegator,
         address assetToBorrow, // address indexed assetToBorrow,
         uint256 amountToBorrow,
@@ -124,20 +126,20 @@ contract AaveCreditDelegationV2 {
 
     /**
      * Approves a borrower to take an uncollaterised loan.
-     * @param _delegatee    The borrower of the funds.
+     * @param _delegate    The borrower of the funds.
      * @param _credit       The amount the borrower is allowed to borrow (i.e.
      *                      their line of credit).
      * @param _asset        The asset they are allowed to borrow.
      */
     function approveBorrower(
-        address _delegatee,
+        address _delegate,
         uint256 _credit,
         address _asset
     ) public {
         // Only a delegator should be able to approve borrowers!
         require(
             !isBorrower[msg.sender],
-            "Only a delegator can approve borrowers. Delegators cannot borrow!"
+            "Only a delegator can approve borrowers!"
         );
 
         /**
@@ -148,23 +150,23 @@ contract AaveCreditDelegationV2 {
         (, address stableDebtTokenAddress, ) =
             dataProvider.getReserveTokensAddresses(_asset);
         IStableDebtToken(stableDebtTokenAddress).approveDelegation(
-            _delegatee,
+            _delegate,
             _credit
         );
 
         // Track approved borrowers.
-        isBorrower[_delegatee] = true;
+        isBorrower[_delegate] = true;
 
         /**
          * @dev -------------------------- TODO --------------------------------
          * What to do with `success` boolean value?
          * ---------------------------------------------------------------------
          */
-        // Used to select a delegatee to repay an uncollateralized loan in the
+        // Used to select a delegate to repay an uncollateralized loan in the
         // `repayBorrower()` function.
-        aaveCDData.addBorrower(msg.sender, _delegatee, _debt);
+        aaveCDData.addBorrower(msg.sender, _delegate, _debt);
 
-        emit CreditApproval(msg.sender, _delegatee, _credit, _asset);
+        emit CreditApproval(msg.sender, _delegate, _credit, _asset);
     }
 
     /**
@@ -184,27 +186,27 @@ contract AaveCreditDelegationV2 {
         uint16 _referralCode,
         address _delegator
     ) public {
-        // Only a delegatee can call borrow from the Aave lending pool!
+        // Only a delegate can borrow from the Aave lending pool!
         require(
             isBorrower[msg.sender],
-            "Only a delegatee can borrow from the Aave lending pool. \n Delegators cannot borrow!"
+            "Only a delegate can borrow from the Aave lending pool!"
         );
 
         /**
          * @dev -------------------  TODO  -----------------------------
          * Need a better way to check that the address of `msg.sender`
-         * exists as a delegatee in the mapping of `Creditors`.
+         * exists as a delegate in the mapping of `Creditors`.
          *
          * If the address of `msg.sender` exists in the mapping of `Creditors`,
-         * set the `msg.sender` to `_delegatee`.
+         * set the `msg.sender` to `_delegate`.
          * -------------------------------------------------------------
          */
         for (uint256 i = 0; i < Creditors[_delegator].length; i++) {
-            if (Creditors[_delegator][i].delegatee == msg.sender) {
-                _delegatee = msg.sender;
+            if (Creditors[_delegator][i].delegate == msg.sender) {
+                _delegate = msg.sender;
         }
 
-        require(_delegatee == msg.sender)
+        require(_delegate == msg.sender)
 
         _delegator = delegator;
 
@@ -217,7 +219,7 @@ contract AaveCreditDelegationV2 {
         );
 
         emit Borrow(
-            _delegatee,
+            _delegate,
             _delegator,
             _assetToBorrow,
             _amountToBorrow,
@@ -256,8 +258,8 @@ contract AaveCreditDelegationV2 {
          * @dev -------------------------- TODO ------------------------------------
          * Is this correct?
          */
-        for (uint256 i = 0; i < delegatees.length; i++) {
-            if (delegatees[i] == msg.sender) {
+        for (uint256 i = 0; i < delegates.length; i++) {
+            if (delegates[i] == msg.sender) {
                 IERC20(_asset).safeTransferFrom(
                     msg.sender,
                     address(this),
