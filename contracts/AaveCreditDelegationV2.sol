@@ -107,7 +107,7 @@ contract AaveCreditDelegationV2 {
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
         require(
             canPullFundsFromCaller,
-            "You must first allow this contract to pull froms from your wallet!"
+            "You must first allow this contract to pull funds from your wallet!"
         );
 
         IERC20(_asset).safeTransferFrom(
