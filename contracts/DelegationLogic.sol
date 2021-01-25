@@ -1,39 +1,17 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.8.0;
 
-/**
- * @dev Structs taken from IterableMapping example in Solidity docs:
- * https://docs.soliditylang.org/en/v0.8.0/types.html#operators-involving-lvalues
- */
-struct KeyFlag {
-    uint256 key;
-    bool isDelegator;
-}
-
-struct CreditDelegation {
-    address delegatee; // address of borrower with an uncollateralized loan
-    uint256 creditLine; // limit of total debt
-    uint256 debt; // debt this borrower owes to the delegator
-    bool exists; // does this credit delegation exist?
-}
+import "./DelegationDataTypes.sol";
 
 /**
  * @dev -------------------------- TODO ---------------------------------
- * Add the proper functions for this CD iterable mapping under its respective
- * library
+ * This library is analogous to Aave's `ReserveLogic`. Implements the logic
+ * to update a delegation's state.
  * ----------------------------------------------------------------------
  */
-struct IMCreditDelegation {
-    // Records the approved delegatees of each delegator.
-    mapping(address => CreditDelegation[]) Creditors;
-    KeyFlag[] keys;
-    uint256 size;
-}
+library DelegationLogic {
+    using DelegationLogic for DelegationDataTypes.DelegationData;
 
-/**
- * @dev "IM" stands for "IterableMapping"
- */
-library IMCreditDeli {
     /**
      * @dev Call this function **after** when the delegator approves a borrower
      */

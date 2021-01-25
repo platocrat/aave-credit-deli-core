@@ -8,7 +8,7 @@ import {
     IStableDebtToken
 } from "./Interfaces.sol";
 import {SafeERC20} from "./Libraries.sol";
-import "./IMCreditDeli.sol"
+import "./IMCreditDeli.sol";
 
 /**
  * This is a proof of concept starter contract, showing how uncollaterised loans are possible
