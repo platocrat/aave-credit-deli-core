@@ -8,9 +8,9 @@ import {
     IStableDebtToken
 } from "./Interfaces.sol";
 import {SafeERC20} from "./Libraries.sol";
-import { DelegationDataTypes } from "./DelegationDataTypes.sol";
-import { DelegationLogic } from "./DelegationLogic.sol";
-import { CreditDeliStorage } from "./CreditDeliStorage.sol";
+import {DelegationDataTypes} from "./DelegationDataTypes.sol";
+import {DelegationLogic} from "./DelegationLogic.sol";
+import {CreditDeliStorage} from "./CreditDeliStorage.sol";
 
 /**
  * This is a proof of concept starter contract, showing how uncollaterised loans are possible
