@@ -20,10 +20,10 @@ library DelegationDataTypes {
     // }
 
     struct DelegationData {
-        address delegate; // address of borrower with an uncollateralized loan
-        uint256 creditLine; // limit of total debt
-        uint256 debt; // debt this borrower owes to the delegator
-        bool exists; // does this credit delegation exist?
+        address asset; // Address of the asset used in the delegation
+        address delegate; // Address of borrower with an uncollateralized loan
+        uint256 creditLine; // Bororwer's limit of total debt
+        uint256 debt; // Amount this borrower owes to the delegator
     }
 
     /**
