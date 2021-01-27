@@ -108,7 +108,7 @@ contract AaveCreditDelegationV2 {
             "You must first allow this contract to pull funds from your wallet!"
         );
 
-        DelegationDataTypes.DelegationData storage delegation = _delegations[delegator];
+        // DelegationDataTypes.DelegationData storage delegation = _delegations[delegator];
 
         IERC20(_asset).safeTransferFrom(
             msg.sender,
@@ -140,6 +140,12 @@ contract AaveCreditDelegationV2 {
         require(
             !isBorrower[msg.sender],
             "Only a delegator can approve borrowers!"
+        );
+        // The current `_delegations` object mapping only allows for 1 delegate
+        // per delegator.
+        require(
+            _delegations[msg.sender].exists == false, 
+            "A delegator can only have 1 delegate at a time!"
         );
 
         /**
