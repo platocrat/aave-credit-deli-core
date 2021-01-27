@@ -194,6 +194,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         uint16 _referralCode,
         address _delegator
     ) public {
+        address delegate;
         delegate = msg.sender;
 
         // Only a delegate can borrow from the Aave lending pool!
@@ -226,7 +227,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         DelegationLogic.debt(_delegator, _amountToBorrowInWei);
 
         emit Borrow(
-            _delegate,
+            delegate,
             _delegator,
             _assetToBorrow,
             _amountToBorrowInWei,
@@ -258,6 +259,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         uint256 _repayAmount,
         address _asset
     ) public {
+        address delegate;
         delegate = msg.sender;
 
         require(
@@ -297,6 +299,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param _asset The underlying asset to withdraw.
      */
     function withdrawCollateral(address _asset) public {
+        address delegator;
         delegator = msg.sender;
 
         // Only a delegator should be able to withdraw their collateral!
