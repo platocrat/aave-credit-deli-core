@@ -25,7 +25,6 @@ import {CreditDeliStorage} from "./CreditDeliStorage.sol";
  */
 contract AaveCreditDelegationV2 {
     using SafeERC20 for IERC20;
-    using DelegationDataTypes for DelegationDataTypes.DelegationData;
 
     address contractOwner;
 
@@ -35,10 +34,8 @@ contract AaveCreditDelegationV2 {
 
     // ---------- State variables ----------
     bool canPullFundsFromCaller;
-    // Track addresses of borrowers (delegates)
+    // Track addresses of borrowers (i.e. delegates)
     mapping(address => bool) isBorrower;
-    // // Used to select a delegate to repay an uncollateralized loan
-    // address[] delegates;
 
     /**
      * @dev -------------------------- TODO ---------------------------------
@@ -61,7 +58,6 @@ contract AaveCreditDelegationV2 {
         ); // Mainnet
 
     // ~~~~~~~~~~~~~~~~~~~~~~  Core contract functions  ~~~~~~~~~~~~~~~~~~~~~~~~
-
     event Deposit(
         address indexed asset,
         address indexed user,
@@ -71,18 +67,19 @@ contract AaveCreditDelegationV2 {
     event CreditApproval(
         address indexed delegator,
         address indexed delegate,
-        uint256 credit,
+        uint256 creditLine,
         address asset // address indexed asset
     );
 
     event Borrow(
-        address indexed delegate,
         address indexed delegator,
+        address indexed delegate,
         address assetToBorrow, // address indexed assetToBorrow,
         uint256 amountToBorrow,
         uint256 interestRateMode
         // uint16 _referralCode
     );
+
 
     /**
      * Deposits collateral into Aave lending pool to enable credit delegation.
@@ -108,8 +105,6 @@ contract AaveCreditDelegationV2 {
             "You must first allow this contract to pull funds from your wallet!"
         );
 
-        // DelegationDataTypes.DelegationData storage delegation = _delegations[delegator];
-
         IERC20(_asset).safeTransferFrom(
             msg.sender,
             address(this),
@@ -127,13 +122,13 @@ contract AaveCreditDelegationV2 {
     /**
      * Approves a borrower to take an uncollaterised loan.
      * @param _delegate    The borrower of the funds.
-     * @param _credit       The amount the borrower is allowed to borrow (i.e.
-     *                      their line of credit).
-     * @param _asset        The asset they are allowed to borrow.
+     * @param _creditLine  The amount the borrower is allowed to borrow (i.e.
+     *                     their line of credit).
+     * @param _asset       The asset they are allowed to borrow.
      */
     function approveBorrower(
         address _delegate,
-        uint256 _credit,
+        uint256 _creditLine,
         address _asset
     ) public {
         // Only a delegator should be able to approve borrowers!
@@ -144,7 +139,7 @@ contract AaveCreditDelegationV2 {
         // The current `_delegations` object mapping only allows for 1 delegate
         // per delegator.
         require(
-            _delegations[msg.sender].exists == false, 
+            _delegations[msg.sender].isApproved == false, 
             "A delegator can only have 1 delegate at a time!"
         );
 
@@ -157,22 +152,16 @@ contract AaveCreditDelegationV2 {
             dataProvider.getReserveTokensAddresses(_asset);
         IStableDebtToken(stableDebtTokenAddress).approveDelegation(
             _delegate,
-            _credit
+            _creditLine
         );
 
         // Track approved borrowers.
         isBorrower[_delegate] = true;
 
-        /**
-         * @dev -------------------------- TODO --------------------------------
-         * What to do with `success` boolean value?
-         * ---------------------------------------------------------------------
-         */
-        // Used to select a delegate to repay an uncollateralized loan in the
-        // `repayBorrower()` function.
-        aaveCDData.addBorrower(msg.sender, _delegate, _debt);
+        // Initialize a delegation object.
+        DelegationLogic.init(msg.sender, _delegate, _creditLine, _asset);
 
-        emit CreditApproval(msg.sender, _delegate, _credit, _asset);
+        emit CreditApproval(msg.sender, _delegate, _creditLine, _asset);
     }
 
     /**
@@ -197,6 +186,8 @@ contract AaveCreditDelegationV2 {
             isBorrower[msg.sender],
             "Only a delegate can borrow from the Aave lending pool!"
         );
+
+        DelegationDataTypes.DelegationData storage delegation = _delegations[msg.sender];
 
         /**
          * @dev -------------------  TODO  -----------------------------
