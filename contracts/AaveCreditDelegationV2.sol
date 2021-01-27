@@ -24,7 +24,7 @@ import {CreditDeliStorage} from "./CreditDeliStorage.sol";
  */
 contract AaveCreditDelegationV2 is CreditDeliStorage {
     using SafeERC20 for IERC20;
-    using DelegationLogic for DelegationDataTypes.DelegationData;
+    using DelegationDataTypes for DelegationDataTypes.DelegationData;
 
     address contractOwner;
 
