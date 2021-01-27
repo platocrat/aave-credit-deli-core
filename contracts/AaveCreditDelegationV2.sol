@@ -9,7 +9,6 @@ import {
 } from "./Interfaces.sol";
 import {SafeERC20} from "./Libraries.sol";
 import {DelegationDataTypes} from "./DelegationDataTypes.sol";
-import {DelegationLogic} from "./DelegationLogic.sol";
 import {CreditDeliStorage} from "./CreditDeliStorage.sol";
 
 /**
