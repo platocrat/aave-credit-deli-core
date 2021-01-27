@@ -25,10 +25,12 @@ import {CreditDeliStorage} from "./CreditDeliStorage.sol";
  */
 contract AaveCreditDelegationV2 is CreditDeliStorage {
     using SafeERC20 for IERC20;
+    using DelegationLogic for DelegationDataTypes.DelegationData;
 
     address contractOwner;
 
-    constructor() public {
+    // Use of `public` keyword is not needed.
+    constructor() {
         contractOwner = msg.sender;
     }
 
@@ -57,7 +59,10 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)
         ); // Mainnet
 
-    // ~~~~~~~~~~~~~~~~~~~~~~  Core contract functions  ~~~~~~~~~~~~~~~~~~~~~~~~
+    // ~~~~~~~~~~~~~~~~~~~~~~  Delegation logic events  ~~~~~~~~~~~~~~~~~~~~~~~~
+    
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~  Core contract events  ~~~~~~~~~~~~~~~~~~~~~~~~~~
     event Deposit(
         address indexed asset,
         address indexed user,
@@ -93,6 +98,9 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         uint256 deposit
     );
 
+    // ~~~~~~~~~~~~~~~~~~~~  Delegation logic functions  ~~~~~~~~~~~~~~~~~~~~~~~
+
+    // ~~~~~~~~~~~~~~~~~~~~~~  Core contract functions  ~~~~~~~~~~~~~~~~~~~~~~~~
     /**
      * Deposits collateral into Aave lending pool to enable credit delegation.
      * @notice User must have approved this contract to pull funds with a call
