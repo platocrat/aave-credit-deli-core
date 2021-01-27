@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: agpl-3.0
-pragma solidity 0.8.0;
+pragma solidity 0.8.1;
 
 import {
     IERC20,
@@ -184,18 +184,17 @@ contract AaveCreditDelegationV2 {
      * @param _amountToBorrowInWei   Require <= amount delegated to borrower.
      * @param _interestRateMode      Require == type of debt delegated token
      * @param _referralCode          If no referral code, == `0`
-     * @param _delegator
+     * @param _delegator             The address of whom the borrower is
+     *                               borrowing from.
      */
     function borrow(
         address _assetToBorrow,
-        uint256 _amountToBorrow,
+        uint256 _amountToBorrowInWei,
         uint256 _interestRateMode,
         uint16 _referralCode,
         address _delegator
     ) public {
         delegate = msg.sender;
-        DelegationDataTypes.DelegationData storage delegation =
-            _delegations[_delegator];
 
         // Only a delegate can borrow from the Aave lending pool!
         require(
@@ -217,20 +216,20 @@ contract AaveCreditDelegationV2 {
 
         lendingPool.borrow(
             _assetToBorrow,
-            _amountToBorrow,
+            _amountToBorrowInWei,
             _interestRateMode,
             _referralCode,
             _delegator
         );
 
         // Update the state of the delegation object.
-        DelegationLogic.debt(_delegator, _amountToBorrow);
+        DelegationLogic.debt(_delegator, _amountToBorrowInWei);
 
         emit Borrow(
             _delegate,
             _delegator,
             _assetToBorrow,
-            _amountToBorrow,
+            _amountToBorrowInWei,
             _interestRateMode
         );
     }
@@ -239,10 +238,10 @@ contract AaveCreditDelegationV2 {
      * Repay an uncollaterised loan (for use by approved borrowers). Approved
      * borrowers must have approved this contract, a priori, with an allowance
      * to transfer the tokens.
-     * @param _repayAmount The amount to repay.
-     * @param _asset       The asset to be repaid.
      * @param _delegator   The creditor to whom the borrower is repaying a loan
      *                     for.
+     * @param _repayAmount The amount to repay.
+     * @param _asset       The asset to be repaid.
      *
      * @dev -------------------------- TODO ------------------------------------
      * User calling this function must have approved this contract with an
