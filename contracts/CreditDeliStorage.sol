@@ -2,7 +2,6 @@
 pragma solidity 0.8.1;
 
 import {DelegationDataTypes} from "./DelegationDataTypes.sol";
-import {DelegationLogic} from "./DelegationLogic.sol";
 
 /**
  * @dev This contract is analogous to Aave's `LendingPoolStorage`. Everything
@@ -10,7 +9,7 @@ import {DelegationLogic} from "./DelegationLogic.sol";
  * contained within `DelegationLogic.sol`.
  */
 contract CreditDeliStorage {
-    using DelegationLogic for DelegationDataTypes.DelegationData;
+    using DelegationDataTypes for DelegationDataTypes.DelegationData;
 
     /**
      * @dev --------------------------  TODO  ----------------------------------
