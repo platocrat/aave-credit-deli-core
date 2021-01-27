@@ -34,7 +34,6 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         contractOwner = msg.sender;
     }
 
-    // ---------- State variables ----------
     bool canPullFundsFromCaller;
     // Track addresses of borrowers (i.e. delegates)
     mapping(address => bool) isBorrower;
@@ -58,9 +57,47 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         IProtocolDataProvider(
             address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)
         ); // Mainnet
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // ~~~~~~~~~~~~~~~~~~~~~~  Delegation logic events  ~~~~~~~~~~~~~~~~~~~~~~~~
-    
+    /**
+     * @dev Emitted when a delegation is created.
+     * @param asset The address of the asset used in the delegation.
+     * @param delegator The address of the creditor.
+     * @param delegate The address of the borrower.
+     * @param creditLine The amount of credit delegated to the borrower.
+     * @param debt The amount of credit used by the borrower that is now owed.
+     */
+    event DelegationDataCreated(
+        address indexed asset,
+        address indexed delegator,
+        address delegate, // address of borrower with an uncollateralized loan
+        uint256 creditLine, // limit of total debt
+        uint256 debt, // debt this borrower owes to the delegator
+        bool isApproved, // Does this delegation have an approved borrower?
+        bool hasFullyRepayed, // Has the borrower repayed their loan?
+        bool hasWithdrawn // Has the delegator withdrawn their deposit?
+    );
+
+    /**
+     * @dev Emitted when the state of a delegation is updated.
+     * @param asset The address of the asset used in the delegation.
+     * @param delegator The address of the creditor.
+     * @param delegate The address of the borrower.
+     * @param creditLine The amount of credit delegated to the borrower.
+     * @param debt The **NEW** debt balance of the borrower that is now owed
+     */
+    event DelegationDataUpdated(
+        address indexed asset,
+        address indexed delegator,
+        address delegate, // address of borrower with an uncollateralized loan
+        uint256 creditLine, // limit of total debt
+        uint256 debt, // **NEW** debt balance of the borrower that is now owed
+        bool isApproved, // Does this delegation have an approved borrower?
+        bool hasFullyRepayed, // Has the borrower repayed their loan?
+        bool hasWithdrawn // Has the delegator withdrawn their deposit?
+    );
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // ~~~~~~~~~~~~~~~~~~~~~~~  Core contract events  ~~~~~~~~~~~~~~~~~~~~~~~~~~
     event Deposit(
@@ -98,7 +135,145 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         uint256 deposit
     );
 
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     // ~~~~~~~~~~~~~~~~~~~~  Delegation logic functions  ~~~~~~~~~~~~~~~~~~~~~~~
+    /**
+     * @dev Initializes a delegation by adding a borrower. Call this function
+     *      **AFTER** a delegator has approved a borrower.
+     * @param _asset The address of the asset used in the delegation
+     * @param _delegator The address of the creditor.
+     * @param _delegate The address of borrower with an uncollateralized loan
+     * @param _creditLine The bororwer's limit of total debt
+     */
+    function initDelegation(
+        address _asset,
+        address _delegator,
+        address _delegate,
+        uint256 _creditLine
+    ) external {
+        // Initialize a delegation object.
+        DelegationDataTypes.DelegationData storage delegation =
+            _delegations[_delegator];
+
+        delegation.asset = _asset;
+        // Set the borrower address to the `delegate` field of the object.
+        delegation.delegate = _delegate;
+        delegation.creditLine = _creditLine;
+        delegation.debt = 0;
+        delegation.isApproved = true;
+        delegation.hasFullyRepayed = false;
+        delegation.hasWithdrawn = false;
+
+        emit DelegationDataCreated(
+            delegation.asset,
+            _delegator,
+            delegation.delegate,
+            delegation.creditLine,
+            delegation.debt,
+            delegation.isApproved,
+            delegation.hasFullyRepayed,
+            delegation.hasWithdrawn
+        );
+    }
+
+    /**
+     * @dev Add the debt amount for this delegation.
+     * @param _delegator The address of the creditor.
+     * @param _amountToBorrow The debt of the delegate is borrowing.
+     */
+    function addDebt(address _delegator, uint256 _amountToBorrow) external {
+        // Get the delegation for this delegator.
+        DelegationDataTypes.DelegationData storage delegation =
+            _delegations[_delegator];
+
+        // Set the borrower address to the `delegate` field of the object.
+        delegation.debt = _amountToBorrow;
+
+        emit DelegationDataUpdated(
+            delegation.asset,
+            _delegator,
+            delegation.delegate,
+            delegation.creditLine,
+            delegation.debt,
+            delegation.isApproved,
+            delegation.hasFullyRepayed,
+            delegation.hasWithdrawn
+        );
+    }
+
+    /**
+     * @dev Add whether the delegation has been repayed in full.
+     * @param _delegator The address of the creditor.
+     * @param _repayAmount The amount of debt to be repayed.
+     */
+    function addRepayment(address _delegator, uint256 _repayAmount) external {
+        // Get the delegation for this delegator.
+        DelegationDataTypes.DelegationData storage delegation =
+            _delegations[_delegator];
+
+        // Set debt owed to new balance.
+        delegation.debt = delegation.debt - _repayAmount;
+
+        if (delegation.hasFullyRepayed == 0) delegation.hasFullyRepayed == true;
+
+        emit DelegationDataUpdated(
+            delegation.asset,
+            _delegator,
+            delegation.delegate,
+            delegation.creditLine,
+            delegation.debt,
+            delegation.isApproved,
+            delegation.hasFullyRepayed,
+            delegation.hasWithdrawn
+        );
+    }
+
+    /**
+     * @dev Add whether the deposit for the delegation has been withdrawn.
+     * @param _delegator The address of the creditor.
+     */
+    function addWithdrawal(address _delegator) external {
+        // Get the delegation for this delegator.
+        DelegationDataTypes.DelegationData storage delegation =
+            _delegations[_delegator];
+
+        delegation.hasWithdrawn = true;
+
+        emit DelegationDataUpdated(
+            delegation.asset,
+            _delegator,
+            delegation.delegate,
+            delegation.creditLine,
+            delegation.debt,
+            delegation.isApproved,
+            delegation.hasFullyRepayed,
+            delegation.hasWithdrawn
+        );
+    }
+
+    /**
+     * @dev -------------------------- TODO ---------------------------------
+     * Allow a function caller to view all debt owed to one delegator.
+     * ----------------------------------------------------------------------
+     */
+    // function getBorrowerDebtOwedToDelegator(address _delegator)
+    //     public
+    //     view
+    // // address _delegate
+    // {
+    //     /** @dev This may be costly */
+    //     for (uint256 i = 0; i < Creditors[_delegator].length; i++) {
+    //         require(
+    //             Creditors[_delegator][i].exists,
+    //             "This delegation does not yet exist!"
+    //         );
+
+    //         if (Creditors[_delegator][i].delegate == _delegate)
+    //             return Creditors[_delegator][i].debt;
+    //     }
+    // }
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // ~~~~~~~~~~~~~~~~~~~~~~  Core contract functions  ~~~~~~~~~~~~~~~~~~~~~~~~
     /**
@@ -179,7 +354,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         isBorrower[_delegate] = true;
 
         // Initialize a delegation object.
-        DelegationLogic.init(msg.sender, _delegate, _creditLine, _asset);
+        initDelegation(msg.sender, _delegate, _creditLine, _asset);
 
         emit CreditApproval(msg.sender, _delegate, _creditLine, _asset);
     }
@@ -232,7 +407,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         );
 
         // Update the state of the delegation object.
-        DelegationLogic.debt(_delegator, _amountToBorrowInWei);
+        addDebt(_delegator, _amountToBorrowInWei);
 
         emit Borrow(
             delegate,
@@ -296,7 +471,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         lendingPool.repay(_asset, _repayAmount, 1, address(this));
 
         // Update the state of the delegation object.
-        DelegationLogic.addRepayment(_delegator, _repayAmount);
+        addRepayment(_delegator, _repayAmount);
 
         emit Repayment(_delegator, delegate, _asset, _repayAmount);
     }
@@ -324,7 +499,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         lendingPool.withdraw(_asset, assetBalance, delegator);
 
         // Update the state of the delegation object.
-        DelegationLogic.addWithdrawal(delegator);
+        addWithdrawal(delegator);
 
         emit Withdrawal(delegator, _asset, assetBalance);
     }
