@@ -23,7 +23,7 @@ import {CreditDeliStorage} from "./CreditDeliStorage.sol";
  * See @dev comments
  * -----------------------------------------------------------------------------
  */
-contract AaveCreditDelegationV2 {
+contract AaveCreditDelegationV2 is CreditDeliStorage {
     using SafeERC20 for IERC20;
 
     address contractOwner;
