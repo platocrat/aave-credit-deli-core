@@ -24,7 +24,9 @@ library DelegationDataTypes {
         address delegate; // Address of borrower with an uncollateralized loan
         uint256 creditLine; // Bororwer's limit of total debt
         uint256 debt; // Amount this borrower owes to the delegator
-        bool exists; // Whether this delegation exists
+        bool isApproved; // Does this delegation have an approved borrower?
+        bool hasFullyRepayed; // Has the borrower repayed their loan?
+        bool hasWithdrawn; // Has the delegator withdrawn their deposit?
     }
 
     /**
