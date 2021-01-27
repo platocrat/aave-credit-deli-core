@@ -24,10 +24,8 @@ import {CreditDeliStorage} from "./CreditDeliStorage.sol";
  * -----------------------------------------------------------------------------
  */
 contract AaveCreditDelegationV2 {
-    IMCreditDelegation aaveCDData;
-
-    using IMCreditDeli for IMCreditDelegation;
     using SafeERC20 for IERC20;
+    using DelegationDataTypes for DelegationDataTypes.DelegationData;
 
     address contractOwner;
 
@@ -110,6 +108,8 @@ contract AaveCreditDelegationV2 {
             "You must first allow this contract to pull funds from your wallet!"
         );
 
+        DelegationDataTypes.DelegationData storage delegation = _delegations[delegator];
+
         IERC20(_asset).safeTransferFrom(
             msg.sender,
             address(this),
@@ -179,7 +179,7 @@ contract AaveCreditDelegationV2 {
      * @param _referralCode          If no referral code, == `0`
      * @param _delegator
      */
-    function borrowFromAaveLendingPool(
+    function borrow(
         address _assetToBorrow,
         uint256 _amountToBorrow,
         uint256 _interestRateMode,
