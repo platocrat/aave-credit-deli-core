@@ -151,7 +151,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         address _delegator,
         address _delegate,
         uint256 _creditLine
-    ) external {
+    ) internal {
         // Initialize a delegation object.
         DelegationDataTypes.DelegationData storage delegation =
             _delegations[_delegator];
@@ -182,7 +182,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param _delegator The address of the creditor.
      * @param _amountToBorrow The debt of the delegate is borrowing.
      */
-    function addDebt(address _delegator, uint256 _amountToBorrow) external {
+    function addDebt(address _delegator, uint256 _amountToBorrow) internal {
         // Get the delegation for this delegator.
         DelegationDataTypes.DelegationData storage delegation =
             _delegations[_delegator];
@@ -207,7 +207,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param _delegator The address of the creditor.
      * @param _repayAmount The amount of debt to be repayed.
      */
-    function addRepayment(address _delegator, uint256 _repayAmount) external {
+    function addRepayment(address _delegator, uint256 _repayAmount) internal {
         // Get the delegation for this delegator.
         DelegationDataTypes.DelegationData storage delegation =
             _delegations[_delegator];
@@ -233,7 +233,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @dev Add whether the deposit for the delegation has been withdrawn.
      * @param _delegator The address of the creditor.
      */
-    function addWithdrawal(address _delegator) external {
+    function addWithdrawal(address _delegator) internal {
         // Get the delegation for this delegator.
         DelegationDataTypes.DelegationData storage delegation =
             _delegations[_delegator];
