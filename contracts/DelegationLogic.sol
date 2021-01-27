@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: agpl-3.0
-pragma solidity 0.8.0;
+pragma solidity 0.8.1;
 
 import {DelegationDataTypes} from "./DelegationDataTypes.sol";
+import {CreditDeliStorage} from "./CreditDeliStorage.sol";
 
 /**
  * @dev
  * This library is analogous to Aave's `ReserveLogic`. Implements the logic
  * to update a delegation's state.
  */
-library DelegationLogic {
+library DelegationLogic is CreditDeliStorage {
     using DelegationLogic for DelegationDataTypes.DelegationData;
 
     /**
@@ -32,10 +33,10 @@ library DelegationLogic {
 
     /**
      * @dev Emitted when the state of a delegation is updated.
-     * @param asset
-     * @param delegator
-     * @param delegate
-     * @param creditLine
+     * @param asset The address of the asset used in the delegation.
+     * @param delegator The address of the creditor.
+     * @param delegate The address of the borrower.
+     * @param creditLine The amount of credit delegated to the borrower.
      * @param debt The **NEW** debt balance of the borrower that is now owed
      */
     event DelegationDataUpdated(
@@ -58,10 +59,10 @@ library DelegationLogic {
      * @param _creditLine The bororwer's limit of total debt
      */
     function init(
-        _delegator,
-        _asset,
-        _delegate,
-        _creditLine
+        address _asset,
+        address _delegator,
+        address _delegate,
+        uint256 _creditLine
     ) external {
         // Initialize a delegation object.
         DelegationDataTypes.DelegationData storage delegation =
