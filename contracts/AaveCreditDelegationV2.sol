@@ -80,6 +80,18 @@ contract AaveCreditDelegationV2 {
         // uint16 _referralCode
     );
 
+    event Repayment(
+        address indexed delegator,
+        address indexed delegate,
+        address asset, // address indexed assetToBorrow,
+        uint256 repayAmount
+    );
+
+    event Withdrawal(
+        address indexed delegator,
+        address asset, // address indexed assetToBorrow,
+        uint256 deposit
+    );
 
     /**
      * Deposits collateral into Aave lending pool to enable credit delegation.
@@ -139,7 +151,7 @@ contract AaveCreditDelegationV2 {
         // The current `_delegations` object mapping only allows for 1 delegate
         // per delegator.
         require(
-            _delegations[msg.sender].isApproved == false, 
+            _delegations[msg.sender].isApproved == false,
             "A delegator can only have 1 delegate at a time!"
         );
 
@@ -181,31 +193,27 @@ contract AaveCreditDelegationV2 {
         uint16 _referralCode,
         address _delegator
     ) public {
+        delegate = msg.sender;
+        DelegationDataTypes.DelegationData storage delegation =
+            _delegations[_delegator];
+
         // Only a delegate can borrow from the Aave lending pool!
         require(
-            isBorrower[msg.sender],
+            isBorrower[delegate],
             "Only a delegate can borrow from the Aave lending pool!"
         );
-
-        DelegationDataTypes.DelegationData storage delegation = _delegations[msg.sender];
-
-        /**
-         * @dev -------------------  TODO  -----------------------------
-         * Need a better way to check that the address of `msg.sender`
-         * exists as a delegate in the mapping of `Creditors`.
-         *
-         * If the address of `msg.sender` exists in the mapping of `Creditors`,
-         * set the `msg.sender` to `_delegate`.
-         * -------------------------------------------------------------
-         */
-        for (uint256 i = 0; i < Creditors[_delegator].length; i++) {
-            if (Creditors[_delegator][i].delegate == msg.sender) {
-                _delegate = msg.sender;
-        }
-
-        require(_delegate == msg.sender)
-
-        _delegator = delegator;
+        require(
+            _delegations[_delegator].delegate == delegate,
+            "This delegator has not yet approved you as a borrower!"
+        );
+        require(
+            _delegations[_delegator].debt == 0,
+            "Delegates can only borrow with 0 debt!"
+        );
+        require(
+            _delegations[_delegator].hasRepayed == false,
+            "This loan has been fully repayed. \n A new delegation is required to borrow again!"
+        );
 
         lendingPool.borrow(
             _assetToBorrow,
@@ -214,6 +222,9 @@ contract AaveCreditDelegationV2 {
             _referralCode,
             _delegator
         );
+
+        // Update the state of the delegation object.
+        DelegationLogic.debt(_delegator, _amountToBorrow);
 
         emit Borrow(
             _delegate,
@@ -230,6 +241,8 @@ contract AaveCreditDelegationV2 {
      * to transfer the tokens.
      * @param _repayAmount The amount to repay.
      * @param _asset       The asset to be repaid.
+     * @param _delegator   The creditor to whom the borrower is repaying a loan
+     *                     for.
      *
      * @dev -------------------------- TODO ------------------------------------
      * User calling this function must have approved this contract with an
@@ -241,31 +254,42 @@ contract AaveCreditDelegationV2 {
      * will have multiple borrowers.
      * -------------------------------------------------------------------------
      */
-    function repayBorrower(uint256 _repayAmount, address _asset) public {
+    function repayBorrower(
+        address _delegator,
+        uint256 _repayAmount,
+        address _asset
+    ) public {
+        delegate = msg.sender;
+
         require(
-            isBorrower[msg.sender] == true,
+            isBorrower[delegate] == true,
             "Only approved borrowers can repay an uncollateralized loan!"
         );
+        // Only a borrower with a delegation can repay a loan.
+        require(
+            _delegations[_delegator].delegate == delegate,
+            "Only a borrower with a delegation can repay a loan!"
+        );
+        // Only a borrower with a delegation can repay a loan.
+        require(
+            !_delegations[_delegator].hasFullyRepayed,
+            "You cannot repay a loan that is already fully repayed!"
+        );
+
         /**
          * @dev -------------------------- TODO ------------------------------------
          * When is the `borrowerAllowances` set?
          */
-        if (borrowerAllowances[msg.sender]) {}
-        /**
-         * @dev -------------------------- TODO ------------------------------------
-         * Is this correct?
-         */
-        for (uint256 i = 0; i < delegates.length; i++) {
-            if (delegates[i] == msg.sender) {
-                IERC20(_asset).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    _repayAmount
-                );
-                IERC20(_asset).safeApprove(address(lendingPool), _repayAmount);
-                lendingPool.repay(_asset, _repayAmount, 1, address(this));
-            }
-        }
+        // if (borrowerAllowances[msg.sender]) {}
+
+        IERC20(_asset).safeTransferFrom(delegate, address(this), _repayAmount);
+        IERC20(_asset).safeApprove(address(lendingPool), _repayAmount);
+        lendingPool.repay(_asset, _repayAmount, 1, address(this));
+
+        // Update the state of the delegation object.
+        DelegationLogic.addRepayment(_delegator, _repayAmount);
+
+        emit Repayment(_delegator, delegate, _asset, _repayAmount);
     }
 
     /**
@@ -274,9 +298,11 @@ contract AaveCreditDelegationV2 {
      * @param _asset The underlying asset to withdraw.
      */
     function withdrawCollateral(address _asset) public {
+        delegator = msg.sender;
+
         // Only a delegator should be able to withdraw their collateral!
         require(
-            !isBorrower[msg.sender],
+            !isBorrower[delegator],
             "Only a delegator should be able to withdraw their collateral!"
         );
         // Only if no outstanding loans delegated
@@ -286,5 +312,10 @@ contract AaveCreditDelegationV2 {
         uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
 
         lendingPool.withdraw(_asset, assetBalance, delegator);
+
+        // Update the state of the delegation object.
+        DelegationLogic.addWithdrawal(delegator);
+
+        emit Withdrawal(delegator, _asset, assetBalance);
     }
 }
