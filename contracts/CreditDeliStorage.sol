@@ -14,19 +14,18 @@ contract CreditDeliStorage {
 
     /**
      * @dev --------------------------  TODO  ----------------------------------
-     * is `DelegationDataTypes.DelegationData[]` the correct data structure or
-     * do I need to use another mapping, or a different data structure to solve
-     * how to keep track of each delegate per delegator?
+     * NOTE: the mapping below only allows for 1 delegate per delegator. You
+     *       will likely need another mapping to allow for multiple delegates
+     *       per delegator.
      *
      * Liam Horne's advice from Discord,
      * "You may want `(delegator, delegate) => boolean` mapping.
      * Basically, a mapping of every possible edge on the graph to true or false
      * -------------------------------  TODO  ----------------------------------
      */
-    // Records the approved delegatees of each delegator.
+    // Records the approved delegate of each delegator.
     mapping(address => DelegationDataTypes.DelegationData)
         internal _delegations;
-
 
     // List of available delegations, structured as a mapping for gas savings
     // reasons
