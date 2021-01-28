@@ -321,15 +321,18 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         uint256 _creditLine,
         address _asset
     ) public {
+        address delegator;
+        delegator = msg.sender;
+
         // Only a delegator should be able to approve borrowers!
         require(
-            !isBorrower[msg.sender],
+            !isBorrower[delegator],
             "Only a delegator can approve borrowers!"
         );
         // The current `_delegations` object mapping only allows for 1 delegate
         // per delegator.
         require(
-            _delegations[msg.sender].isApproved == false,
+            _delegations[delegator].isApproved == false,
             "A delegator can only have 1 delegate at a time!"
         );
 
@@ -363,7 +366,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param _interestRateMode      Require == type of debt delegated token
      * @param _referralCode          If no referral code, == `0`
      * @param _delegator             The address of whom the borrower is
-     *                               borrowing from.
+     *                               borrowing from. THIS IS REQUIRED!
      */
     function borrow(
         address _assetToBorrow,
