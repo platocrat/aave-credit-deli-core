@@ -175,8 +175,10 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     it('contract should have 10,000 less DAI after depositing collateral', async () => {
-      // User approves this contract to pull funds from his/her account
+      // 1. User approves this contract to pull funds from his/her account
+      setCanPullFundsFromCaller()
 
+      // 2. User then clicks `deposit` button
       await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
