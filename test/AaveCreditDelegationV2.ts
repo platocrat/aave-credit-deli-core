@@ -180,7 +180,7 @@ describe('AaveCreditDelegationV2', () => {
     /** @notice FAILS */
     it('contract should have 10,000 less DAI after depositing collateral', async () => {
       // 1. User approves this contract to pull funds from his/her account
-      setCanPullFundsFromCaller(true)
+      setCanPullFundsFromCaller(false)
 
       // 2. User then clicks `deposit` button
       await aaveCreditDelegationV2.depositCollateral(
