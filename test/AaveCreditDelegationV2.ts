@@ -177,7 +177,7 @@ describe('AaveCreditDelegationV2', () => {
       expect(diff.toString()).to.equal('20000')
     })
 
-    /** @notice FAILS */
+    /** @notice PASSES */
     it('contract should have 10,000 less DAI after depositing collateral', async () => {
       // 1. User approves this contract to pull funds from his/her account
       setCanPullFundsFromCaller(false)
