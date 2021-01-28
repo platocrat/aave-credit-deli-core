@@ -137,9 +137,22 @@ describe('AaveCreditDelegationV2', () => {
    * @notice PASSES
    */
   describe("deposit collateral with contract's funds", async () => {
-    let balanceBefore: BigNumber
+    let balanceBefore: BigNumber,
+      canPullFundsFromCaller: boolean
 
-    const canPullFundsFromCaller: boolean = false
+    /**
+     * @TODO ------------------------------ TODO -------------------------------
+     * Add small helper text directly below the `deposit` button (to deposit 
+     * collateral) that notifies the user that this will let the smart contract
+     * pull funds from their wallet.
+     * -------------------------------------------------------------------------
+     */
+    // This function is called by the UI when the delegator flips a radio 
+    // switch, thus allowing for the UI to pull funds from their wallet and 
+    // enabling the `deposit` button.
+    function setCanPullFundsFromCaller() {
+      return canPullFundsFromCaller = true
+    }
 
     before(async () => {
       balanceBefore = await dai.balanceOf(aaveCreditDelegationV2.address)
@@ -163,7 +176,7 @@ describe('AaveCreditDelegationV2', () => {
 
     it('contract should have 10,000 less DAI after depositing collateral', async () => {
       // User approves this contract to pull funds from his/her account
-      await aaveCreditDelegationV2.setCanPullFundsFromCaller(canPullFundsFromCaller)
+
       await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
