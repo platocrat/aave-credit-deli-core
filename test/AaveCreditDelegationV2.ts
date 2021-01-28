@@ -177,7 +177,8 @@ describe('AaveCreditDelegationV2', () => {
 
     /** @notice PASSES */
     it('contract should have 10,000 less DAI after depositing collateral', async () => {
-      // 1. Delegator approves this contract to pull funds from his/her account
+      // 1. Delegator denies this contract to pull funds from his/her account,
+      //    in effect, telling the contract to use funds held within it.
       setCanPullFundsFromCaller(false)
 
       // 2. Delegator then clicks `deposit` button
