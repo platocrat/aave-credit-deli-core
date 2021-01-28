@@ -192,9 +192,6 @@ describe('AaveCreditDelegationV2', () => {
       const balanceAfterDepositingCollateral: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
       const diff: BigNumber = balanceAfterDepositingCollateral.sub(balanceBefore)
 
-      console.log(balanceAfterDepositingCollateral.toString())
-      console.log(diff.toString())
-
       expect(diff.toString()).to.equal("10000")
     })
   })
@@ -242,45 +239,45 @@ describe('AaveCreditDelegationV2', () => {
 
     /** @notice FAILS */
     // Borrowing 50% of the delegated credit amount.
-    // it("delegatee should borrow 50% of delegator's deposit amount from lending pool", async () => {
-    //   assetToBorrow = daiAddress,
-    //     interestRateMode = 1,                      // using the DAI stablecoin
-    //     referralCode = 0,                          // no referral code
-    //     /**
-    //      * @todo -------------------------- TODO ---------------------------------
-    //      * NOTE: delegator address is instantiated when contract at creation.
-    //      *
-    //      * The goal of `AaveCreditDelegationV2.sol` is to be a generalized contract
-    //      * that can be deployed once and used by any wishing delegators wanting to
-    //      * deposit collateral into the Aave lending pool to then delegate their 
-    //      * credit to potential delegatees.
-    //      * 
-    //      * SO, a delegator address need NOT to be instantiated at contract creation.
-    //      * Instead, it should be passed in as an argument when calling ANY of the
-    //      * contract's functions.
-    //      * ----------------------------------------------------------------------
-    //      */
-    //     delegatorAddress = delegator
+    it("delegatee should borrow 50% of delegator's deposit amount from lending pool", async () => {
+      assetToBorrow = daiAddress,
+        interestRateMode = 1,                      // using the DAI stablecoin
+        referralCode = 0,                          // no referral code
+        /**
+         * @todo -------------------------- TODO ---------------------------------
+         * NOTE: delegator address is instantiated when contract at creation.
+         *
+         * The goal of `AaveCreditDelegationV2.sol` is to be a generalized contract
+         * that can be deployed once and used by any wishing delegators wanting to
+         * deposit collateral into the Aave lending pool to then delegate their 
+         * credit to potential delegatees.
+         * 
+         * SO, a delegator address need NOT to be instantiated at contract creation.
+         * Instead, it should be passed in as an argument when calling ANY of the
+         * contract's functions.
+         * ----------------------------------------------------------------------
+         */
+        delegatorAddress = delegator
 
-    //   // Borrow
-    //   await aaveCreditDelegationV2.borrow(
-    //     assetToBorrow,
-    //     amountToBorrowInWei,
-    //     interestRateMode,
-    //     referralCode,
-    //     delegatorAddress
-    //   )
+      // Borrow
+      await aaveCreditDelegationV2.borrow(
+        assetToBorrow,
+        amountToBorrowInWei,
+        interestRateMode,
+        referralCode,
+        delegatorAddress
+      )
 
-    //   const balanceAfterBorrowing: BigNumber = await dai.balanceOf(delegatee)
-    //   const diff: BigNumber = balanceAfterBorrowing.sub(balanceBefore)
+      const balanceAfterBorrowing: BigNumber = await dai.balanceOf(delegatee)
+      const diff: BigNumber = balanceAfterBorrowing.sub(balanceBefore)
 
-    //   expect(diff.toString()).to.eq(amountToBorrowInWei)
-    // })
+      expect(diff.toString()).to.eq(amountToBorrowInWei)
+    })
 
-    // /** @todo ----------------------  TODO -------------------------------------  */
-    // it('repay the borrower', async () => {
-    //   await aaveCreditDelegationV2.repayBorrower()
-    // })
+    /** @todo ----------------------  TODO -------------------------------------  */
+    it('repay the borrower', async () => {
+      await aaveCreditDelegationV2.repayBorrower()
+    })
   })
 
   // describe("after approving borrower for 100% of delegator's deposit amount", async () => {
