@@ -33,7 +33,6 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         contractOwner = msg.sender;
     }
 
-    bool canPullFundsFromCaller;
     // Track addresses of borrowers (i.e. delegates)
     mapping(address => bool) isBorrower;
 
@@ -295,7 +294,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
         require(
-            canPullFundsFromCaller,
+            _canPullFundsFromCaller == true,
             "You must first allow this contract to pull funds from your wallet!"
         );
 
