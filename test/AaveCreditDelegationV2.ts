@@ -213,6 +213,9 @@ describe('AaveCreditDelegationV2', () => {
        * `before()` statements!
        */
       const ownerSigner: Signer = await hre.ethers.provider.getSigner(delegator)
+
+      amountToBorrowInWei = hre.ethers.BigNumber.from(depositAmount * 0.5)
+
       /**
        * @todo -------------------------- TODO ---------------------------------
        * Let a borrower borrow an amount that was lended to them from the delegator
@@ -231,7 +234,6 @@ describe('AaveCreditDelegationV2', () => {
     // Borrowing 50% of the delegated credit amount.
     it("delegatee should borrow 50% of delegator's deposit amount from lending pool", async () => {
       assetToBorrow = daiAddress,
-        amountToBorrowInWei = depositAmount * 0.5,
         interestRateMode = 1,                      // using the DAI stablecoin
         referralCode = 0,                          // no referral code
         /**
