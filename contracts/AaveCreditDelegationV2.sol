@@ -293,20 +293,17 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             "Only a delegator can deposit collateral!"
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
-        require(
-            _canPullFundsFromCaller == true,
-            "You must first allow this contract to pull funds from your wallet!"
-        );
-
-        IERC20(_asset).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _depositAmount
-        );
-
-        // Approve Aave lending pool for deposit, then deposit `_depositAmount`
-        IERC20(_asset).safeApprove(address(lendingPool), _depositAmount);
-        lendingPool.deposit(_asset, _depositAmount, address(this), 0);
+        if (canPullFundsFromCaller == true) {
+            IERC20(_asset).safeTransferFrom(
+                msg.sender,
+                address(this),
+                _depositAmount
+            );
+        } else {
+            // Approve Aave lending pool for deposit, then deposit `_depositAmount`
+            IERC20(_asset).safeApprove(address(lendingPool), _depositAmount);
+            lendingPool.deposit(_asset, _depositAmount, address(this), 0);
+        }
 
         // Fetch this event client-side
         emit Deposit(_asset, msg.sender, _depositAmount);
