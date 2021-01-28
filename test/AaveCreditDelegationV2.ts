@@ -168,7 +168,7 @@ describe('AaveCreditDelegationV2', () => {
 
     /** @notice PASSES */
     // Send 20,000 to CD contract
-    it('delegator should now hold 20,000 DAI after sending DAI to contract', async () => {
+    it('contract should now hold 20,000 DAI, after sending DAI to contract', async () => {
       const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
       const diff: BigNumber = balanceAfterReceivingDAI.sub(balanceBefore)
 
