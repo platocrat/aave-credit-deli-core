@@ -142,16 +142,16 @@ describe('AaveCreditDelegationV2', () => {
 
     /**
      * @TODO ------------------------------ TODO -------------------------------
-     * Add small helper text directly below the `deposit` button (to deposit 
-     * collateral) that notifies the user that this will let the smart contract
-     * pull funds from their wallet.
+     * Add an easy radio switch directly above or next to the the `deposit` 
+     * button (to deposit collateral) which disables the `deposit` button when
+     * switched off, and enables deposits when switched on.
      * -------------------------------------------------------------------------
      */
-    // This function is called by the UI when the delegator flips a radio 
+    // This function is called by the UI when the delegator flips the radio 
     // switch, thus allowing for the UI to pull funds from their wallet and 
     // enabling the `deposit` button.
     function setCanPullFundsFromCaller() {
-      return canPullFundsFromCaller = true
+      canPullFundsFromCaller = true // Use React hooks to set this state.
     }
 
     before(async () => {
@@ -180,6 +180,7 @@ describe('AaveCreditDelegationV2', () => {
       await aaveCreditDelegationV2.depositCollateral(
         daiAddress,
         depositAmount,
+        canPullFundsFromCaller
       )
 
       const balanceAfterDepositingCollateral: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
