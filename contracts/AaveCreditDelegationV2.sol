@@ -287,15 +287,18 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         uint256 _depositAmount,
         bool _canPullFundsFromCaller // Ensure that this value is set client-side
     ) public {
+        address delegator;
+        delegator = msg.sender;
+
         // Ensure that this function is only called by the delegator.
         require(
-            isBorrower[msg.sender] == false,
+            isBorrower[delegator] == false,
             "Only a delegator can deposit collateral!"
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
         if (_canPullFundsFromCaller == true) {
             IERC20(_asset).safeTransferFrom(
-                msg.sender,
+                delegator,
                 address(this),
                 _depositAmount
             );
@@ -306,7 +309,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         }
 
         // Fetch this event client-side
-        emit Deposit(_asset, msg.sender, _depositAmount);
+        emit Deposit(_asset, delegator, _depositAmount);
     }
 
     /**
@@ -333,7 +336,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         // per delegator.
         require(
             _delegations[delegator].isApproved == false,
-            "A delegator can only have 1 delegate at a time!"
+            "A delegator can only have 1 approved borrower at a time!"
         );
 
         /**
