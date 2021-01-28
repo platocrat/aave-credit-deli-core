@@ -214,7 +214,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         // Set debt owed to new balance.
         delegation.debt = delegation.debt - _repayAmount;
 
-        if (delegation.hasFullyRepayed == 0) delegation.hasFullyRepayed == true;
+        if (delegation.debt == 0) delegation.hasFullyRepayed == true;
 
         emit DelegationDataUpdated(
             delegation.asset,
@@ -353,7 +353,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         isBorrower[_delegate] = true;
 
         // Initialize a delegation object.
-        initDelegation(msg.sender, _delegate, _creditLine, _asset);
+        initDelegation(_asset, msg.sender, _delegate, _creditLine);
 
         emit CreditApproval(msg.sender, _delegate, _creditLine, _asset);
     }
@@ -393,7 +393,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             "Delegates can only borrow with 0 debt!"
         );
         require(
-            _delegations[_delegator].hasRepayed == false,
+            _delegations[_delegator].hasFullyRepayed == false,
             "This loan has been fully repayed. \n A new delegation is required to borrow again!"
         );
 
