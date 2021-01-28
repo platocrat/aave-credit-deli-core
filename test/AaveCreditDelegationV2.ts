@@ -255,7 +255,7 @@ describe('AaveCreditDelegationV2', () => {
         delegatorAddress = delegator
 
       // Borrow
-      await aaveCreditDelegationV2.borrowFromAaveLendingPool(
+      await aaveCreditDelegationV2.borrow(
         assetToBorrow,
         amountToBorrowInWei,
         interestRateMode,
