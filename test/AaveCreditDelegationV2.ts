@@ -13,7 +13,7 @@ import { Contract } from '@ethersproject/contracts'
 import { JsonRpcSigner } from '@ethersproject/providers'
 import { Dai } from '../typechain'
 
-import DaiArtifact from '../artifacts/contracts/DAI.sol/DAI.json'
+import DaiArtifact from '../artifacts/contracts/dai.sol/Dai.json'
 
 describe('AaveCreditDelegationV2', () => {
   let aaveCreditDelegationV2: Contract,
