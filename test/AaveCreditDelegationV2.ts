@@ -115,7 +115,7 @@ describe('AaveCreditDelegationV2', () => {
       expect(balanceBefore.toString()).to.equal('5000000000000000000')
     })
 
-    /** @notice FAILS */
+    /** @notice PASSES */
     it('delegator should have 10,000 less DAI after depositing collateral', async () => {
       // 1. User approves this contract to pull funds from his/her account.
       setCanPullFundsFromCaller(true)
@@ -191,6 +191,9 @@ describe('AaveCreditDelegationV2', () => {
 
       const balanceAfterDepositingCollateral: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
       const diff: BigNumber = balanceAfterDepositingCollateral.sub(balanceBefore)
+
+      console.log(balanceAfterDepositingCollateral.toString())
+      console.log(diff.toString())
 
       expect(diff.toString()).to.equal("10000")
     })
