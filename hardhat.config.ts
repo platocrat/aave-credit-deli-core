@@ -34,7 +34,7 @@ export default {
          * in our `ts.config.json`, TypeScript config file!
          */
         url: process.env.FORKING_URL,
-        blockNumber: 11395144
+        blockNumber: 11752611 // Fri, Jan 29
       }
     }
   },
