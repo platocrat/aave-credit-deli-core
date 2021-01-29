@@ -329,11 +329,6 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             "Only a delegator can deposit collateral!"
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
-        /**
-         * @dev -------------------------- TODO --------------------------------
-         * This `if else` check is incorrect!!
-         * ---------------------------------------------------------------------
-         */
         if (_canPullFundsFromCaller == true)
             IERC20(_asset).transferFrom(
                 delegator,
