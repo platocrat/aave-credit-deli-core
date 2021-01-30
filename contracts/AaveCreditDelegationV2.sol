@@ -409,7 +409,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param _interestRateMode      Require == type of debt delegated token
      * @param _referralCode          If no referral code, == `0`
      * @param _delegator             The address of whom the borrower is
-     *                               borrowing from. THIS IS REQUIRED!
+     *                               borrowing the collateral deposit from.
+     *                               THIS IS REQUIRED!
      */
     function borrow(
         address _assetToBorrow,
