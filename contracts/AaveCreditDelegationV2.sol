@@ -439,7 +439,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         );
         require(
             _delegations[_delegator].creditLine <= _amountToBorrowInWei,
-            "You can only borrow less than or equal to your delegated credit line!"
+            "You can only borrow an amount <= your delegated credit line!"
         );
 
         /**
