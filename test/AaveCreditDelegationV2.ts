@@ -5,24 +5,36 @@
  * live." - John Woods
  *-----------------------------------------------------------------------------
  */
+import fetch from 'node-fetch'
 import { expect } from "chai"
 import hre from 'hardhat'
 import { Signer } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Contract } from '@ethersproject/contracts'
 import { JsonRpcSigner } from '@ethersproject/providers'
-import { Dai } from '../typechain'
 
+import { Dai } from '../typechain'
 import DaiArtifact from '../artifacts/contracts/dai.sol/Dai.json'
+
+
+const ETH_URL: string = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
+
+// Used to later compute ether and wei amounts to the current price of usd.
+async function getEtherPrice(_url: string) {
+  const json: any = (await fetch(_url)).json()
+  return json // access the nested keys in the object to get extract the price.
+}
 
 describe('AaveCreditDelegationV2', () => {
   let aaveCreditDelegationV2: Contract,
     depositorSigner: JsonRpcSigner,
+    borrowerSigner: JsonRpcSigner,
     delegator: string, // == contract creator
     delegate: string, // == approved borrower
+    contractOwner: string,
     dai: Dai
 
-  const depositAmount: number = 10_000
+  const depositAmount: number = 2_000 // in USD
   const daiAddress: string = '0x6b175474e89094c44da98b954eedeac495271d0f'
   const lendingPoolAddress: string = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9'
 
@@ -49,8 +61,9 @@ describe('AaveCreditDelegationV2', () => {
      * as function arguments for the credit delegation contract.
      * ----------------------------------------------------------------------
      */
-    // These accounts start with 5000000000000000000 DAI at initialization
-    [delegator, delegate] = await hre.ethers.provider.listAccounts()
+    [delegator, delegate, contractOwner] = await hre.ethers.provider.listAccounts()
+    depositorSigner = await hre.ethers.provider.getSigner(delegator)
+    borrowerSigner = await hre.ethers.provider.getSigner(delegate)
 
     signer.sendTransaction({
       to: delegator,
@@ -71,14 +84,11 @@ describe('AaveCreditDelegationV2', () => {
       })
 
     // Approve credit delegation contract for transfers later
-    await dai.approve(aaveCreditDelegationV2Address, depositAmount)
-
-    depositorSigner = await hre.ethers.provider.getSigner(delegator)
+    await dai.approve(aaveCreditDelegationV2Address, hre.ethers.utils.parseEther('100'))
 
     // Create CD contract
     const AaveCreditDelegationV2 = await hre.ethers.getContractFactory(
-      'AaveCreditDelegationV2',
-      depositorSigner
+      'AaveCreditDelegationV2'
     )
 
     aaveCreditDelegationV2 = await AaveCreditDelegationV2.deploy()
@@ -98,11 +108,14 @@ describe('AaveCreditDelegationV2', () => {
   /** @notice PASSES */
   describe("deposit collateral with delegator's funds", async () => {
     let balanceBefore: BigNumber,
-      canPullFundsFromCaller: boolean,
       delegateBalanceBefore: BigNumber,
       delegatorBalanceBefore: BigNumber,
+      balanceBeforeInEther: string,
+      delegateBalanceBeforeInEther: string,
+      delegatorBalanceBeforeInEther: string,
+      canPullFundsFromCaller: boolean,
       delegateSigner: Signer,
-      delegatorSigner: Signer,
+      delegatorSigner: JsonRpcSigner,
       assetToBorrow: string, // address
       // Must be equal to or less than amount delegated.
       amountToBorrowInWei: BigNumber,
@@ -111,94 +124,84 @@ describe('AaveCreditDelegationV2', () => {
       interestRateMode: number,
       // To be implemented later (used for early supportive projects to the Aave
       // ecosystem). If there is no referral code, use `0`.
-      referralCode: number
+      referralCode: number,
+      currentEthPriceInUSD: number,
+      fiveEtherInUSD: number
 
     function setCanPullFundsFromCaller(_canPull: boolean) {
       canPullFundsFromCaller = _canPull
     }
 
     before(async () => {
-      balanceBefore = await dai.balanceOf(delegator) // Balances
+      // Balances in wei
+      balanceBefore = await dai.balanceOf(delegator)
       delegateBalanceBefore = await dai.balanceOf(delegate)
       delegatorBalanceBefore = await dai.balanceOf(delegator)
-      delegateSigner = await hre.ethers.provider.getSigner(delegate) // Signers
-      delegatorSigner = await hre.ethers.provider.getSigner(delegator)
+      // Balances in ether
+      balanceBeforeInEther = hre
+        .ethers.utils.formatUnits(balanceBefore, 'ether')
+      delegateBalanceBeforeInEther = hre
+        .ethers.utils.formatUnits(delegateBalanceBefore, 'ether')
+      delegatorBalanceBeforeInEther = hre
+        .ethers.utils.formatUnits(delegatorBalanceBefore, 'ether')
+
+      // Prices
+      currentEthPriceInUSD = (await getEtherPrice(ETH_URL)).ethereum.usd
+      fiveEtherInUSD = 5.0 * currentEthPriceInUSD
     })
 
     /** @notice PASSES */
-    it('delegator should hold 0 DAI before deposit', async () => {
-      expect(balanceBefore.toString()).to.equal('0')
+    it('delegator should hold 5.0 ether worth of DAI before deposit', async () => {
+      const balanceInUSD: number =
+        parseFloat(balanceBeforeInEther) * currentEthPriceInUSD
+
+      expect(balanceInUSD).to.eq(fiveEtherInUSD)
     })
 
     /** @notice PASSES */
-    it('delegator should have 10,000 less DAI after depositing collateral', async () => {
-      assetToBorrow = daiAddress,
-        interestRateMode = 1,                      // using the DAI stablecoin
-        referralCode = 0,                           // no referral code
-        amountToBorrowInWei = hre.ethers.utils.parseUnits('1000', 'wei')
-
-      const depositAmountInWei: BigNumber = hre
-        .ethers.utils.parseUnits('10000', 'wei')
-
+    it('delegator should have 2,000 less DAI after depositing collateral', async () => {
       // 1. Delegator approves this contract to pull funds from his/her account.
       setCanPullFundsFromCaller(true)
 
+      // Convert `depositAmount` to a value in wei
+      const depositAmountInEther: number = depositAmount / currentEthPriceInUSD
+      const depositAmountInWei: BigNumber = hre
+        .ethers.utils.parseEther(depositAmountInEther.toString())
+
       // 2. Delegator then deposits collateral into Aave lending pool.
-      await aaveCreditDelegationV2.connect(delegatorSigner).depositCollateral(
+      await aaveCreditDelegationV2.connect(depositorSigner).depositCollateral(
         daiAddress,
         depositAmountInWei,
         canPullFundsFromCaller
       )
 
-      await aaveCreditDelegationV2.connect(delegatorSigner).approveBorrower(
-        // address of borrower
-        delegate,
-        // test borrowing of full `depositAmount` and varying amounts of it
-        amountToBorrowInWei,
-        // address of asset
-        daiAddress
-      )
+      const balanceAfter: BigNumber = await dai.balanceOf(delegator)
+      const balanceAfterInEther: string = hre
+        .ethers.utils.formatUnits(balanceAfter.toString(), 'ether')
+      const diff: number =
+        parseFloat(balanceBeforeInEther) - parseFloat(balanceAfterInEther)
 
-      // 3. The delegate borrows against the Aave lending pool using the credit
-      //    delegated to them by the delegator.
-      await aaveCreditDelegationV2.connect(delegateSigner).borrow(
-        assetToBorrow,
-        amountToBorrowInWei,
-        interestRateMode,
-        referralCode,
-        delegator
-      )
-
-      const delegateBalanceAfterBorrowing: BigNumber = await dai
-        .balanceOf(delegate)
-      const diff: BigNumber = delegateBalanceAfterBorrowing
-        .sub(delegateBalanceBefore)
-
-      expect(diff.toString()).to.eq(amountToBorrowInWei)
-
-      // const balanceAfter: BigNumber = await dai.balanceOf(delegator)
-      // const diff: BigNumber = balanceBefore.sub(balanceAfter)
-
-      // expect(diff.toString()).to.equal("10000")
+      expect(diff).to.equal(depositAmountInEther)
     })
 
     /** @notice FAILS */
     // Borrowing 50% of the delegated credit amount.
     it("delegate should borrow 50% of delegator's deposit amount from lending pool", async () => {
       assetToBorrow = daiAddress,
-        interestRateMode = 1,                      // using the DAI stablecoin
-        referralCode = 0,                           // no referral code
-        amountToBorrowInWei = hre.ethers.utils.parseUnits('1000', 'wei') // == 5,000 DAI
+        // using the DAI stablecoin
+        interestRateMode = 1,
+        referralCode = 0                           // no referral code
 
-      // 1. Delegator then deposits collateral into Aave lending pool.
-      // await aaveCreditDelegationV2.connect(delegatorSigner).depositCollateral(
-      //   daiAddress,
-      //   depositAmount,
-      //   canPullFundsFromCaller
-      // )
-      // 2. Delegator approves the delegate for a line of credit,
+      const depositAmountInEther: number =
+        (depositAmount * 0.5) / currentEthPriceInUSD
+
+      // == 1,000 DAI
+      amountToBorrowInWei = hre
+        .ethers.utils.parseEther(depositAmountInEther.toString())
+
+      // 1. Delegator approves the delegate for a line of credit,
       //    which is a percentage of the delegator's collateral deposit.
-      await aaveCreditDelegationV2.connect(delegatorSigner).approveBorrower(
+      await aaveCreditDelegationV2.connect(depositorSigner).approveBorrower(
         // address of borrower
         delegate,
         // test borrowing of full `depositAmount` and varying amounts of it
@@ -207,17 +210,14 @@ describe('AaveCreditDelegationV2', () => {
         daiAddress
       )
 
-      console.log("Asset to borrow: ", assetToBorrow)
-      console.log("Amount to borrow in wei: ", amountToBorrowInWei.toString())
-
-      // 3. The delegate borrows against the Aave lending pool using the credit
+      // 2. The delegate borrows against the Aave lending pool using the credit
       //    delegated to them by the delegator.
-      await aaveCreditDelegationV2.connect(delegateSigner).borrow(
-        assetToBorrow,
+      await aaveCreditDelegationV2.connect(borrowerSigner).borrow(
+        daiAddress,
         amountToBorrowInWei,
         interestRateMode,
         referralCode,
-        delegator
+        aaveCreditDelegationV2.address
       )
 
       const delegateBalanceAfterBorrowing: BigNumber = await dai
@@ -228,7 +228,7 @@ describe('AaveCreditDelegationV2', () => {
       expect(diff.toString()).to.eq(amountToBorrowInWei)
     })
 
-    /** @todo ----------------------  TODO -------------------------------------  */
+    /** @todo ----------------------  TODO ------------------------------------- */
     // it('repay the borrower', async () => {
     //   await aaveCreditDelegationV2.repayBorrower()
     // })
@@ -284,7 +284,7 @@ describe('AaveCreditDelegationV2', () => {
       setCanPullFundsFromCaller(false)
 
       // 2. Delegator then clicks `deposit` button
-      await aaveCreditDelegationV2.depositCollateral(
+      await aaveCreditDelegationV2.connect(depositorSigner).depositCollateral(
         daiAddress,
         depositAmount,
         canPullFundsFromCaller

@@ -408,7 +408,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         //     _creditLine,
         //     interestRateMode
         // );
-        initDelegation(_asset, msg.sender, _delegate, _creditLine);
+        // initDelegation(_asset, msg.sender, _delegate, _creditLine);
 
         emit CreditApproval(msg.sender, _delegate, _creditLine, _asset);
     }
