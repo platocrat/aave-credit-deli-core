@@ -329,7 +329,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             "Only a delegator can deposit collateral!"
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
-        if (_canPullFundsFromCaller == true)
+        if (_canPullFundsFromCaller)
             IERC20(_asset).transferFrom(
                 delegator,
                 address(this),
@@ -455,12 +455,21 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             "You can only borrow less than or equal to your delegated credit line!"
         );
 
+        /**
+         * @dev Advice from David from Aave:
+         * "with credit delegation contracts, make sure you're aware of whom
+         * actually gets credited the deposit in the Aave protocol. I.e. it is
+         * most likely your contract address, not your msg.sender. So when you
+         * borrow onBehalfOf, you should be using your contract address"
+         */
         lendingPool.borrow(
             _assetToBorrow,
             _amountToBorrowInWei,
             _interestRateMode,
             _referralCode,
-            _delegator
+            // Previously, was `_delegator`, but this is incorrect! See David's
+            // suggestion in the dev comment above.
+            address(this)
         );
 
         // Update the state of the delegation object.
