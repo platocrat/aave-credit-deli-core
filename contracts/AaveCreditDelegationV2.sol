@@ -395,22 +395,9 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         // if (stableDebtTokenAddress)
         //    interestRateMode = 1;
 
-        /**
-         * @dev -------------------------- TODO --------------------------------
-         * MUST CHECK FOR WHETHER STABLE OR VARIABLE TOKEN
-         * ---------------------------------------------------------------------
-         */
-        // Initialize a delegation object.
-        // initDelegation(
-        //     _asset,
-        //     msg.sender,
-        //     _delegate,
-        //     _creditLine,
-        //     interestRateMode
-        // );
-        // initDelegation(_asset, msg.sender, _delegate, _creditLine);
+        initDelegation(_asset, delegator, _delegate, _creditLine);
 
-        emit CreditApproval(msg.sender, _delegate, _creditLine, _asset);
+        emit CreditApproval(delegator, _delegate, _creditLine, _asset);
     }
 
     /**
