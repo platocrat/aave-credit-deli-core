@@ -13,7 +13,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Contract } from '@ethersproject/contracts'
 import { JsonRpcSigner } from '@ethersproject/providers'
 
-import { Dai } from '../typechain'
+import { Dai } from '../typechain/contracts/Dai'
 import DaiArtifact from '../artifacts/contracts/dai.sol/Dai.json'
 
 
