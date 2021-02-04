@@ -42,25 +42,6 @@ describe('AaveCreditDelegationV2', () => {
     // Prepare DAI contract interface for CD contract 
     const signer: JsonRpcSigner = await hre.ethers.provider.getSigner(0);
 
-    /**
-     * @todo -------------------------- TODO ---------------------------------
-     * NOTE: delegator address is instantiated when contract at creation.
-     *
-     * The goal of `AaveCreditDelegationV2.sol` is to be a generalized contract
-     * that can be deployed once and used by any wishing delegators wanting to
-     * deposit collateral into the Aave lending pool to then delegate their 
-     * credit to potential delegates.
-     * 
-     * SO, a delegator address need NOT to be instantiated at contract creation.
-     * Instead, it should be passed in as an argument when calling ANY of the
-     * contract's functions.
-     * 
-     * ~~~~~~~~~~~~~~~~~~~~  ARCHITECTURE SIGNIFICANCE  ~~~~~~~~~~~~~~~~~~~~
-     * The above means that the UI must be designed to accept *any account*
-     * addresses as values for the `delegator`, `delegate`, and `delegates`
-     * as function arguments for the credit delegation contract.
-     * ----------------------------------------------------------------------
-     */
     [delegator, delegate, contractOwner] = await hre.ethers.provider.listAccounts()
     depositorSigner = await hre.ethers.provider.getSigner(delegator)
     borrowerSigner = await hre.ethers.provider.getSigner(delegate)
@@ -91,9 +72,6 @@ describe('AaveCreditDelegationV2', () => {
       'AaveCreditDelegationV2'
     )
 
-    console.log('Delegate DAI balance before: ', (await dai.balanceOf(delegate)).toString())
-    console.log('delegator DAI balance before: ', (await dai.balanceOf(delegator)).toString())
-
     aaveCreditDelegationV2 = await AaveCreditDelegationV2.deploy()
 
     await aaveCreditDelegationV2.deployed()
@@ -118,8 +96,6 @@ describe('AaveCreditDelegationV2', () => {
       delegatorBalanceBeforeInEther: string,
       canPullFundsFromCaller: boolean,
       assetToBorrow: string, // address
-      // Must be equal to or less than amount delegated.
-      amountToBorrowInWei: BigNumber,
       // Must be of the same type as the debt token that is delegated, i.e. 
       // stable = 1, variable = 2.
       interestRateMode: number,
@@ -193,11 +169,10 @@ describe('AaveCreditDelegationV2', () => {
         interestRateMode = 1,
         referralCode = 0                           // no referral code
 
+      // Borrow amount must be <= amount delegated (1,000 DAI <= 2,000 DAI)
       const depositAmountInEther: number =
         (depositAmount * 0.5) / currentEthPriceInUSD
-
-      // == 1,000 DAI
-      amountToBorrowInWei = hre
+      const amountToBorrowInWei: BigNumber = hre
         .ethers.utils.parseEther(depositAmountInEther.toString())
 
       console.log("Amount to borrow in wei: ", amountToBorrowInWei.toString())
@@ -209,22 +184,28 @@ describe('AaveCreditDelegationV2', () => {
         // address of borrower
         delegate,
         // test borrowing of full `depositAmount` and varying amounts of it
-        amountToBorrowInWei.toString(),
+        amountToBorrowInWei,
         // address of asset
         daiAddress
       )
 
       // 2. The delegate borrows against the Aave lending pool using the credit
       //    delegated to them by the delegator.
+      /**
+       * @TODO -------------------------- TODO ---------------------------------
+       * Borrow function is called but delegate receives nothing after calling
+       * borrow 
+       * ----------------------------------------------------------------------
+       */
       await aaveCreditDelegationV2.connect(borrowerSigner).borrow(
-        daiAddress,
+        assetToBorrow,
         amountToBorrowInWei,
         interestRateMode,
         referralCode,
         delegator
       )
 
-      console.log("Delegate balance of DAI before: ", (await dai.balanceOf(delegate)).toString())
+      console.log("Delegate balance of DAI after: ", (await dai.balanceOf(delegate)).toString())
 
       const delegateBalanceAfterBorrowing: BigNumber = await dai
         .balanceOf(delegate)

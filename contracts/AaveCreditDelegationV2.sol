@@ -12,8 +12,8 @@ import {DelegationDataTypes} from "./DelegationDataTypes.sol";
 import {CreditDeliStorage} from "./CreditDeliStorage.sol";
 
 /**
- * This is a proof of concept starter contract, showing how uncollaterised loans are possible
- * using Aave v2 credit delegation.
+ * This is a proof of concept starter contract, showing how uncollaterised loans
+ * are possible using Aave v2 credit delegation.
  * @dev -------------------------------- TODO ----------------------------------
  * This example supports stable interest rate borrows.
  * -----------------------------------------------------------------------------
