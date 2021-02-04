@@ -1,8 +1,4 @@
 # ------ Project Specific ------
-test/sample-test.ts
-contracts/dai.sol
-contracts/DelegationLogic.sol
-.yarn/plugins/*
 MarketMake-workshop-notes
 my-notes
 
