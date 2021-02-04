@@ -13,7 +13,8 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Contract } from '@ethersproject/contracts'
 import { JsonRpcSigner } from '@ethersproject/providers'
 
-import { Dai } from '../typechain/contracts/Dai' // for tests only
+import { Dai } from '../typechain/contracts/Dai'
+
 
 const ETH_URL: string = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
 
@@ -65,7 +66,6 @@ describe('AaveCreditDelegationV2', () => {
     currentEthPriceInUSD = (await getEtherPrice(ETH_URL)).ethereum.usd,
       fiveEtherInUSD = 5.0 * currentEthPriceInUSD
 
-
     signer.sendTransaction({
       to: delegator,
       value: hre.ethers.utils.parseEther('1')
@@ -81,17 +81,25 @@ describe('AaveCreditDelegationV2', () => {
       daiAddress
     ) as Dai
 
-    const aaveCreditDelegationV2Address: string = hre.ethers.utils
-      .getContractAddress({
+    const aaveCreditDelegationV2Address: string = hre
+      .ethers.utils.getContractAddress({
         from: delegator,
         nonce: (await hre.ethers.provider.getTransactionCount(delegator)) + 1
       })
+
+    // Approve credit delegation contract for transfers later
+    await dai.approve(
+      aaveCreditDelegationV2Address,
+      hre.ethers.utils.parseEther('100')
+    )
+
     // Create CD contract
     const AaveCreditDelegationV2 = await hre.ethers.getContractFactory(
       'AaveCreditDelegationV2'
     )
 
-    dai.approve(aaveCreditDelegationV2Address, amountToWei(depositAmount))
+    // console.log('Delegate DAI balance before: ', (await dai.balanceOf(delegate)).toString())
+    // console.log('delegator DAI balance before: ', (await dai.balanceOf(delegator)).toString())
 
     aaveCreditDelegationV2 = await AaveCreditDelegationV2.deploy()
 
@@ -133,6 +141,7 @@ describe('AaveCreditDelegationV2', () => {
       balanceBefore = await dai.balanceOf(delegator)
       delegateBalanceBefore = await dai.balanceOf(delegate)
       delegatorBalanceBefore = await dai.balanceOf(delegator)
+
       // Balances in ether
       balanceBeforeInEther = hre
         .ethers.utils.formatUnits(balanceBefore, 'ether')
@@ -243,9 +252,7 @@ describe('AaveCreditDelegationV2', () => {
       interestRateMode: number,
       // To be implemented later (used for early supportive projects to the Aave
       // ecosystem). If there is no referral code, use `0`.
-      referralCode: number,
-      currentEthPriceInUSD: number,
-      fiveEtherInUSD: number
+      referralCode: number
 
     /**
      * @TODO ------------------------------ TODO -------------------------------
@@ -272,6 +279,7 @@ describe('AaveCreditDelegationV2', () => {
       delegateBalanceBeforeInEther = hre
         .ethers.utils.formatUnits(delegateBalanceBefore, 'ether')
 
+      // Send 3.0 ether worth of DAI to CD contract
       await dai.transfer(
         aaveCreditDelegationV2.address,
         /**
@@ -279,17 +287,17 @@ describe('AaveCreditDelegationV2', () => {
          * Need to test lower deposit and borrow amounts!
          * -------------------------------------------------------------------------
          */
-        hre.ethers.utils.parseEther('1')
+        hre.ethers.utils.parseEther('3')
       )
     })
 
     /** @notice PASSES */
-    // Send 20,000 to CD contract
-    it('contract should now hold 5.0 ether worth of DAI, after sending DAI to contract', async () => {
-      // const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
-      // const diff: BigNumber = balanceAfterReceivingDAI.sub(balanceBefore)
+    it('contract should now hold 3.0 ether worth of DAI, after sending DAI to contract', async () => {
+      const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
+      const diff: BigNumber = balanceAfterReceivingDAI.sub(balanceBefore)
+      const threeEther: BigNumber = hre.ethers.utils.parseEther('3')
 
-      // expect(diff.toString()).to.equal('20000')
+      expect(diff.toString()).to.equal(threeEther)
     })
 
     /** @notice PASSES */

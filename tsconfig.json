@@ -12,7 +12,7 @@
     "./test",
     "./typechain",
     "./*.ts"
-  ],
+, "types"  ],
   "files": [
     "hardhat.config.ts",
     "env.d.ts"
