@@ -15,7 +15,7 @@ import { JsonRpcSigner } from '@ethersproject/providers'
 
 import { Dai } from '../typechain/contracts/Dai'
 import DaiArtifact from '../artifacts/contracts/dai.sol/Dai.json'
-
+import { MintableERC20 } from '../typechain/contracts/MintableERC20'
 
 const ETH_URL: string = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
 
@@ -32,7 +32,7 @@ describe('AaveCreditDelegationV2', () => {
     delegator: string, // == contract creator
     delegate: string, // == approved borrower
     contractOwner: string,
-    dai: Dai
+    dai: MintableERC20
 
   const depositAmount: number = 2_000 // in USD
   const daiAddress: string = '0x6b175474e89094c44da98b954eedeac495271d0f'
@@ -56,7 +56,12 @@ describe('AaveCreditDelegationV2', () => {
       params: [delegator]
     })
 
-    dai = await hre.ethers.getContractAt('IERC20', daiAddress) as Dai
+    dai = await hre.ethers.getContractAt(
+      'MintableERC20',
+      daiAddress
+    ) as MintableERC20
+
+    
 
     const aaveCreditDelegationV2Address: string = hre
       .ethers.utils.getContractAddress({
