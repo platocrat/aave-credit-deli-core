@@ -310,15 +310,15 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     /**
      * Deposits collateral into Aave lending pool to enable credit delegation.
      * @notice User must have approved this contract to pull funds with a call
-     *         to the `setCanPullFundsFromCaller()` function above.
+     *         to the `setCanPullFundsFromDelegator()` function above.
      * @param _asset                  The asset to be deposited as collateral.
      * @param _depositAmount          The amount to be deposited as collateral.
-     * @param _canPullFundsFromCaller Boolean value set by user on UI.
+     * @param _canPullFundsFromDelegator Boolean value set by user on UI.
      */
     function depositCollateral(
         address _asset,
         uint256 _depositAmount,
-        bool _canPullFundsFromCaller // Ensure that this value is set client-side
+        bool _canPullFundsFromDelegator // Ensure that this value is set client-side
     ) public {
         address delegator;
         delegator = msg.sender;
@@ -329,8 +329,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             "Only a delegator can deposit collateral!"
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
-        if (_canPullFundsFromCaller) {
-            IERC20(_asset).transferFrom(
+        if (_canPullFundsFromDelegator) {
+            IERC20(_asset).safeTransferFrom(
                 delegator,
                 address(this),
                 _depositAmount
@@ -338,7 +338,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         }
 
         // Approve Aave lending pool for deposit, then deposit `_depositAmount`
-        IERC20(_asset).approve(address(lendingPool), _depositAmount);
+        IERC20(_asset).safeApprove(address(lendingPool), _depositAmount);
         lendingPool.deposit(_asset, _depositAmount, address(this), 0);
 
         // Fetch this event client-side
@@ -498,7 +498,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     function repayBorrower(
         address _delegator,
         uint256 _repayAmount,
-        address _asset
+        address _asset,
+        bool _canPullFundsFromDelegate
     ) public {
         address delegate;
         delegate = msg.sender;
@@ -524,8 +525,11 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
          */
         // if (borrowerAllowances[msg.sender]) {}
 
-        IERC20(_asset).safeTransferFrom(delegate, address(this), _repayAmount);
-        IERC20(_asset).safeApprove(address(lendingPool), _repayAmount);
+        if (_canPullFundsFromDelegate) {
+            IERC20(_asset).transferFrom(delegate, address(this), _repayAmount);
+        }
+
+        IERC20(_asset).approve(address(lendingPool), _repayAmount);
         lendingPool.repay(_asset, _repayAmount, 1, address(this));
 
         // Update the state of the delegation object.
