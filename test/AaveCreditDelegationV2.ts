@@ -105,16 +105,13 @@ describe('AaveCreditDelegationV2', () => {
     await aaveCreditDelegationV2.deployed()
   })
 
-  /**
-   * @dev 
-   * Just for your knowledge the await method is fine to call. Since write 
-   * methods return contract transactions unlike read methods which will
-   * return balance for example after calling contract.balanceOf() we can 
-   * ignore the await if we are not going to be unwapping the contract
-   * transaction object returned in a promise.
+  /** 
+   * ---------------------------------------------------------------------------
+   * @dev When delegator doesn't allow the CD contract to pull funds from their
+   *      account.
+   * @notice PASSES 
+   * ---------------------------------------------------------------------------
    */
-
-  /** @notice PASSES */
   describe("deposit collateral with delegator's funds", async () => {
     let balanceBefore: BigNumber,
       cdContractBalanceBefore: BigNumber,
@@ -124,8 +121,10 @@ describe('AaveCreditDelegationV2', () => {
       cdContractBalanceBeforeInEther: string,
       delegateBalanceBeforeInEther: string,
       delegatorBalanceBeforeInEther: string,
-      canPullFundsFromCaller: boolean,
+      canPullFundsFromDelegator: boolean,
+      canPullFundsFromDelegate: boolean,
       assetToBorrow: string, // address
+      amountToBorrowInWei: BigNumber,
       // Must be of the same type as the debt token that is delegated, i.e. 
       // stable = 1, variable = 2.
       interestRateMode: number,
@@ -133,8 +132,12 @@ describe('AaveCreditDelegationV2', () => {
       // ecosystem). If there is no referral code, use `0`.
       referralCode: number
 
-    function setCanPullFundsFromCaller(_canPull: boolean) {
-      canPullFundsFromCaller = _canPull
+    function setCanPullFundsFromDelegator(_canPull: boolean) {
+      canPullFundsFromDelegator = _canPull
+    }
+
+    function setCanPullFundsFromDelegate(_canPull: boolean) {
+      canPullFundsFromDelegate = _canPull
     }
 
     before(async () => {
@@ -155,7 +158,8 @@ describe('AaveCreditDelegationV2', () => {
         ),
         // aDAI balance in ether
         cdContractBalanceBeforeInEther = hre
-          .ethers.utils.formatUnits(cdContractBalanceBefore, 'ether')
+          .ethers.utils.formatUnits(cdContractBalanceBefore, 'ether'),
+        amountToBorrowInWei = amountToWei(depositAmount * 0.5)
     })
 
     /** @notice PASSES */
@@ -170,14 +174,14 @@ describe('AaveCreditDelegationV2', () => {
     /** @notice PASSES */
     it('delegator should have 2,000 less DAI after depositing collateral', async () => {
       // 1. Delegator approves this contract to pull funds from his/her account.
-      setCanPullFundsFromCaller(true)
+      setCanPullFundsFromDelegator(true)
 
 
       // 2. Delegator then deposits collateral into Aave lending pool.
       await aaveCreditDelegationV2.connect(depositorSigner).depositCollateral(
         daiAddress,
         amountToWei(depositAmount),
-        canPullFundsFromCaller
+        canPullFundsFromDelegator
       )
 
       const balanceAfter: BigNumber = await dai.balanceOf(delegator)
@@ -210,23 +214,21 @@ describe('AaveCreditDelegationV2', () => {
       expect(diff.toFixed(4)).to.eq(assertionBalance.toFixed(4))
     })
 
-    /** @notice FAILS */
-    // Borrowing 50% of the delegated credit amount.
+    /** 
+     * @dev Borrowing 50% of the delegated credit amount. Borrowed funds sent to
+     *      the CD contract's address and NOT to the delegator's address.
+     * @notice PASSES 
+     */
     it("delegate should borrow 50% of delegator's deposit amount from lending pool", async () => {
       assetToBorrow = daiAddress,
         interestRateMode = 1, // using the DAI stablecoin
         referralCode = 0  // no referral code
 
-      const amountToBorrowInWei = amountToWei(depositAmount * 0.5)
-
       // 1. Delegator approves the delegate for a line of credit,
       //    which is a percentage of the delegator's collateral deposit.
       await aaveCreditDelegationV2.connect(depositorSigner).approveBorrower(
-        // address of borrower
         delegate,
-        // test borrowing of full `depositAmount` and varying amounts of it
         amountToBorrowInWei,
-        // address of asset
         daiAddress
       )
 
@@ -251,15 +253,42 @@ describe('AaveCreditDelegationV2', () => {
       expect(diff.toString()).to.eq(amountToBorrowInWei)
     })
 
-    /** @todo ----------------------  TODO ------------------------------------- */
-    // it('repay the borrower', async () => {
-    //   await aaveCreditDelegationV2.repayBorrower()
-    // })
+    /** @notice PASSES */
+    it('delegate should repay borrowed funds', async () => {
+      // 1. Borrower sets `_canPullFundFromDelegate` to false.
+      setCanPullFundsFromDelegate(false)
+
+      cdContractBalanceBefore = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
+
+      const assetToRepay: string = daiAddress
+      const repayAmount = amountToBorrowInWei
+
+      // 2. Borrower calls function to repay uncollateralized loan.
+      await aaveCreditDelegationV2.connect(borrowerSigner).repayBorrower(
+        delegator,
+        repayAmount,
+        assetToRepay,
+        canPullFundsFromDelegate
+      )
+
+      const cdContractBalanceAfterRepayment: BigNumber = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
+      const diff: BigNumber = cdContractBalanceBefore.sub(
+        cdContractBalanceAfterRepayment
+      )
+
+      expect(diff).to.eq(repayAmount)
+    })
   })
 
   /** 
+   * ---------------------------------------------------------------------------
    * @dev Test when the delegator sets `canPull` to `false`
    * @notice PASSES
+   * ---------------------------------------------------------------------------
    */
   describe("deposit collateral with contract's funds", async () => {
     let balanceBefore: BigNumber,
@@ -269,7 +298,7 @@ describe('AaveCreditDelegationV2', () => {
       balanceBeforeInEther: string,
       cdContractBalanceBeforeInEther: string,
       delegateBalanceBeforeInEther: string,
-      canPullFundsFromCaller: boolean,
+      canPullFundsFromDelegator: boolean,
       assetToBorrow: string, // address
       // Must be equal to or less than amount delegated.
       amountToBorrowInWei: BigNumber,
@@ -290,8 +319,8 @@ describe('AaveCreditDelegationV2', () => {
     // This function is called by the UI when the delegator flips the radio 
     // switch, thus allowing for the UI to pull funds from their wallet and 
     // enabling the `deposit` button.
-    function setCanPullFundsFromCaller(_canPull: boolean) {
-      canPullFundsFromCaller = _canPull
+    function setCanPullFundsFromDelegator(_canPull: boolean) {
+      canPullFundsFromDelegator = _canPull
     }
 
     before(async () => {
@@ -302,11 +331,6 @@ describe('AaveCreditDelegationV2', () => {
       // Send 3.0 ether worth of DAI to CD contract
       await dai.transfer(
         aaveCreditDelegationV2.address,
-        /**
-         * @TODO ------------------------------ TODO -------------------------------
-         * Need to test lower deposit and borrow amounts!
-         * -------------------------------------------------------------------------
-         */
         hre.ethers.utils.parseEther('3')
       )
 
@@ -344,13 +368,13 @@ describe('AaveCreditDelegationV2', () => {
     it('contract should have 2,000 less DAI after depositing collateral', async () => {
       // 1. Delegator denies this contract to pull funds from his/her account,
       //    in effect, telling the contract to use funds held within it.
-      setCanPullFundsFromCaller(false)
+      setCanPullFundsFromDelegator(false)
 
       // 2. Delegator then clicks `deposit` button
       await aaveCreditDelegationV2.connect(depositorSigner).depositCollateral(
         daiAddress,
         amountToWei(depositAmount),
-        canPullFundsFromCaller
+        canPullFundsFromDelegator
       )
 
       const balanceAfter: BigNumber = await dai.balanceOf(
