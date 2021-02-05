@@ -329,12 +329,13 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             "Only a delegator can deposit collateral!"
         );
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
-        if (_canPullFundsFromCaller)
+        if (_canPullFundsFromCaller) {
             IERC20(_asset).transferFrom(
                 delegator,
                 address(this),
                 _depositAmount
             );
+        }
 
         // Approve Aave lending pool for deposit, then deposit `_depositAmount`
         IERC20(_asset).approve(address(lendingPool), _depositAmount);
@@ -401,9 +402,10 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     }
 
     /**
-     * @dev -------------------------- TODO ---------------------------------
-     * Let a borrower borrow an amount that was lended to them from a delegator
-     * ----------------------------------------------------------------------
+     * @dev Let a delegate borrow an amount that was lended to them from a
+     *      delegator.
+     * @notice NOTE: this contract holds and manages a delegate's funds on
+     *         behalf of them.
      * @param _assetToBorrow         The address for the asset.
      * @param _amountToBorrowInWei   Require <= amount delegated to borrower.
      * @param _interestRateMode      Require == type of debt delegated token
@@ -448,7 +450,9 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
          * "with credit delegation contracts, make sure you're aware of whom
          * actually gets credited the deposit in the Aave protocol. I.e. it is
          * most likely your contract address, not your msg.sender. So when you
-         * borrow onBehalfOf, you should be using your contract address"
+         * borrow onBehalfOf, you should be using your contract address".
+         * @notice Borrowed funds are sent to this contract's address, and NOT
+         *         sent to the address of the borrower (i.e. delegate).
          */
         lendingPool.borrow(
             _assetToBorrow,

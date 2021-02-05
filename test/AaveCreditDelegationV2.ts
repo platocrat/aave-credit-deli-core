@@ -14,7 +14,7 @@ import { Contract } from '@ethersproject/contracts'
 import { JsonRpcSigner } from '@ethersproject/providers'
 
 import { Dai } from '../typechain/contracts/Dai'
-
+import { AToken } from '../typechain/contracts/AToken'
 
 const ETH_URL: string = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
 
@@ -33,12 +33,17 @@ describe('AaveCreditDelegationV2', () => {
     borrowerSigner: JsonRpcSigner,
     ownerSigner: JsonRpcSigner,
     dai: Dai,
+    aDai: AToken,
     currentEthPriceInUSD: number,
     fiveEtherInUSD: number
 
   const mintAmount: number = 10_000 // in USD
   const depositAmount: number = 2_000 // in USD
+  // The deposit-asset 
   const daiAddress: string = '0x6b175474e89094c44da98b954eedeac495271d0f'
+  // The interest bearing asset, received 
+  const aDaiAddress: string = '0x028171bCA77440897B824Ca71D1c56caC55b68A3'
+  // Used to get the balance of the lending pool
   const lendingPoolAddress: string = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9'
 
   function amountToEther(_amount: number) {
@@ -76,10 +81,8 @@ describe('AaveCreditDelegationV2', () => {
       params: [delegator]
     })
 
-    dai = await hre.ethers.getContractAt(
-      'contracts/Interfaces.sol:IERC20',
-      daiAddress
-    ) as Dai
+    dai = await hre.ethers.getContractAt('IERC20', daiAddress) as Dai
+    aDai = await hre.ethers.getContractAt('IERC20', aDaiAddress) as AToken
 
     const aaveCreditDelegationV2Address: string = hre
       .ethers.utils.getContractAddress({
@@ -98,11 +101,7 @@ describe('AaveCreditDelegationV2', () => {
       'AaveCreditDelegationV2'
     )
 
-    // console.log('Delegate DAI balance before: ', (await dai.balanceOf(delegate)).toString())
-    // console.log('delegator DAI balance before: ', (await dai.balanceOf(delegator)).toString())
-
     aaveCreditDelegationV2 = await AaveCreditDelegationV2.deploy()
-
     await aaveCreditDelegationV2.deployed()
   })
 
@@ -118,9 +117,11 @@ describe('AaveCreditDelegationV2', () => {
   /** @notice PASSES */
   describe("deposit collateral with delegator's funds", async () => {
     let balanceBefore: BigNumber,
+      cdContractBalanceBefore: BigNumber,
       delegateBalanceBefore: BigNumber,
       delegatorBalanceBefore: BigNumber,
       balanceBeforeInEther: string,
+      cdContractBalanceBeforeInEther: string,
       delegateBalanceBeforeInEther: string,
       delegatorBalanceBeforeInEther: string,
       canPullFundsFromCaller: boolean,
@@ -137,24 +138,31 @@ describe('AaveCreditDelegationV2', () => {
     }
 
     before(async () => {
-      // Balances in wei
-      balanceBefore = await dai.balanceOf(delegator)
-      delegateBalanceBefore = await dai.balanceOf(delegate)
-      delegatorBalanceBefore = await dai.balanceOf(delegator)
-
-      // Balances in ether
-      balanceBeforeInEther = hre
-        .ethers.utils.formatUnits(balanceBefore, 'ether')
-      delegateBalanceBeforeInEther = hre
-        .ethers.utils.formatUnits(delegateBalanceBefore, 'ether')
-      delegatorBalanceBeforeInEther = hre
-        .ethers.utils.formatUnits(delegatorBalanceBefore, 'ether')
+      // DAI balances in wei
+      balanceBefore = await dai.balanceOf(delegator),
+        delegateBalanceBefore = await dai.balanceOf(delegate),
+        delegatorBalanceBefore = await dai.balanceOf(delegator),
+        // DAI balances in ether
+        balanceBeforeInEther = hre
+          .ethers.utils.formatUnits(balanceBefore, 'ether'),
+        delegateBalanceBeforeInEther = hre
+          .ethers.utils.formatUnits(delegateBalanceBefore, 'ether'),
+        delegatorBalanceBeforeInEther = hre
+          .ethers.utils.formatUnits(delegatorBalanceBefore, 'ether'),
+        // aDAI balance in wei
+        cdContractBalanceBefore = await aDai.balanceOf(
+          aaveCreditDelegationV2.address
+        ),
+        // aDAI balance in ether
+        cdContractBalanceBeforeInEther = hre
+          .ethers.utils.formatUnits(cdContractBalanceBefore, 'ether')
     })
 
     /** @notice PASSES */
     it('delegator should hold 5.0 ether worth of DAI before deposit', async () => {
       const balanceInUSD: number =
         parseFloat(balanceBeforeInEther) * currentEthPriceInUSD
+
 
       expect(balanceInUSD).to.eq(fiveEtherInUSD)
     })
@@ -163,6 +171,7 @@ describe('AaveCreditDelegationV2', () => {
     it('delegator should have 2,000 less DAI after depositing collateral', async () => {
       // 1. Delegator approves this contract to pull funds from his/her account.
       setCanPullFundsFromCaller(true)
+
 
       // 2. Delegator then deposits collateral into Aave lending pool.
       await aaveCreditDelegationV2.connect(depositorSigner).depositCollateral(
@@ -178,10 +187,27 @@ describe('AaveCreditDelegationV2', () => {
         parseFloat(balanceBeforeInEther) - parseFloat(balanceAfterInEther)
 
       expect(
-        diff.toFixed(7)
+        diff.toFixed(4)
       ).to.eq(
-        amountToEther(depositAmount).toFixed(7)
+        amountToEther(depositAmount).toFixed(4)
       )
+    })
+
+    /** @notice PASSES */
+    it('CD contract should now hold 2000 aDAI', async () => {
+      const newContractBalanceString = (await aDai.balanceOf(
+        aaveCreditDelegationV2.address)
+      ).toString()
+      const newContractBalanceInUSD = parseFloat(hre.ethers.utils.formatUnits(
+        newContractBalanceString,
+        'ether'
+      ))
+      const diff: number = (
+        newContractBalanceInUSD - parseFloat(cdContractBalanceBeforeInEther)
+      ) * currentEthPriceInUSD
+      const assertionBalance: number = 2000
+
+      expect(diff.toFixed(4)).to.eq(assertionBalance.toFixed(4))
     })
 
     /** @notice FAILS */
@@ -206,24 +232,21 @@ describe('AaveCreditDelegationV2', () => {
 
       // 2. The delegate borrows against the Aave lending pool using the credit
       //    delegated to them by the delegator.
-      /**
-       * @TODO -------------------------- TODO ---------------------------------
-       * Borrow function is called but delegate receives nothing after calling
-       * borrow 
-       * ----------------------------------------------------------------------
-       */
       await aaveCreditDelegationV2.connect(borrowerSigner).borrow(
         assetToBorrow,
+        /** @dev Borrowed funds are sent to the CD contract. */
         amountToBorrowInWei,
         interestRateMode,
         referralCode,
         delegator
       )
 
-      console.log("Delegate balance of DAI after: ", (await dai.balanceOf(delegate)).toString())
-
-      const delegateBalanceAfterBorrowing: BigNumber = await dai.balanceOf(delegate)
-      const diff: BigNumber = delegateBalanceAfterBorrowing.sub(delegateBalanceBefore)
+      const cdContractBalanceAfterBorrow: BigNumber = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
+      const diff: BigNumber = cdContractBalanceAfterBorrow.sub(
+        cdContractBalanceBefore
+      )
 
       expect(diff.toString()).to.eq(amountToBorrowInWei)
     })
@@ -240,8 +263,11 @@ describe('AaveCreditDelegationV2', () => {
    */
   describe("deposit collateral with contract's funds", async () => {
     let balanceBefore: BigNumber,
+      cdContractBalanceBefore: BigNumber,
       delegateBalanceBefore: BigNumber,
+      contractDaiBalanceBeforeToSubtract: BigNumber,
       balanceBeforeInEther: string,
+      cdContractBalanceBeforeInEther: string,
       delegateBalanceBeforeInEther: string,
       canPullFundsFromCaller: boolean,
       assetToBorrow: string, // address
@@ -269,15 +295,9 @@ describe('AaveCreditDelegationV2', () => {
     }
 
     before(async () => {
-      balanceBefore = await dai.balanceOf(aaveCreditDelegationV2.address)
-
-      // Balances in ether
-      delegateBalanceBefore = await dai.balanceOf(delegate)
-      // Balances in wei
-      balanceBeforeInEther = hre
-        .ethers.utils.formatUnits(balanceBefore, 'ether')
-      delegateBalanceBeforeInEther = hre
-        .ethers.utils.formatUnits(delegateBalanceBefore, 'ether')
+      contractDaiBalanceBeforeToSubtract = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
 
       // Send 3.0 ether worth of DAI to CD contract
       await dai.transfer(
@@ -289,42 +309,80 @@ describe('AaveCreditDelegationV2', () => {
          */
         hre.ethers.utils.parseEther('3')
       )
+
+      // DAI balances in wei
+      balanceBefore = await dai.balanceOf(aaveCreditDelegationV2.address),
+        delegateBalanceBefore = await dai.balanceOf(delegate),
+        // DAI balances in ether
+        balanceBeforeInEther = hre
+          .ethers.utils.formatUnits(balanceBefore, 'ether'),
+        delegateBalanceBeforeInEther = hre
+          .ethers.utils.formatUnits(delegateBalanceBefore, 'ether'),
+        // aDAI balance in wei
+        cdContractBalanceBefore = await aDai.balanceOf(
+          aaveCreditDelegationV2.address
+        ),
+        // aDAI balance in ether
+        cdContractBalanceBeforeInEther = hre
+          .ethers.utils.formatUnits(cdContractBalanceBefore, 'ether')
     })
 
     /** @notice PASSES */
     it('contract should now hold 3.0 ether worth of DAI, after sending DAI to contract', async () => {
-      const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(aaveCreditDelegationV2.address)
-      const diff: BigNumber = balanceAfterReceivingDAI.sub(balanceBefore)
+      const balanceAfterReceivingDAI: BigNumber = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
       const threeEther: BigNumber = hre.ethers.utils.parseEther('3')
+      const balance: BigNumber = balanceAfterReceivingDAI.sub(
+        contractDaiBalanceBeforeToSubtract
+      )
 
-      expect(diff.toString()).to.equal(threeEther)
+      expect(balance).to.equal(threeEther)
     })
 
     /** @notice PASSES */
     it('contract should have 2,000 less DAI after depositing collateral', async () => {
-      // // 1. Delegator denies this contract to pull funds from his/her account,
-      // //    in effect, telling the contract to use funds held within it.
-      // setCanPullFundsFromCaller(false)
+      // 1. Delegator denies this contract to pull funds from his/her account,
+      //    in effect, telling the contract to use funds held within it.
+      setCanPullFundsFromCaller(false)
 
-      // // Convert `depositAmount` to a value in wei
-      // const depositAmountInEther: number = depositAmount / currentEthPriceInUSD
-      // const depositAmountInWei: BigNumber = hre
-      //   .ethers.utils.parseEther(depositAmountInEther.toString())
+      // 2. Delegator then clicks `deposit` button
+      await aaveCreditDelegationV2.connect(depositorSigner).depositCollateral(
+        daiAddress,
+        amountToWei(depositAmount),
+        canPullFundsFromCaller
+      )
 
-      // // 2. Delegator then clicks `deposit` button
-      // await aaveCreditDelegationV2.connect(depositorSigner).depositCollateral(
-      //   daiAddress,
-      //   depositAmountInWei,
-      //   canPullFundsFromCaller
-      // )
+      const balanceAfter: BigNumber = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
+      const balanceAfterInEther: string = hre
+        .ethers.utils.formatUnits(balanceAfter.toString(), 'ether')
+      const diff: number =
+        parseFloat(balanceBeforeInEther) - parseFloat(balanceAfterInEther)
 
-      // const balanceAfter: BigNumber = await dai.balanceOf(delegator)
-      // const balanceAfterInEther: string = hre
-      //   .ethers.utils.formatUnits(balanceAfter.toString(), 'ether')
-      // const diff: number =
-      //   parseFloat(balanceBeforeInEther) - parseFloat(balanceAfterInEther)
+      expect(
+        diff.toFixed(4)
+      ).to.eq(
+        amountToEther(depositAmount).toFixed(4)
+      )
+    })
 
-      // expect(diff.toFixed(7)).to.equal(depositAmountInEther.toFixed(7))
+    /** @notice PASSES */
+    it('CD contract should now hold 2000 aDAI', async () => {
+      const newContractBalanceString = (await aDai.balanceOf(
+        aaveCreditDelegationV2.address)
+      ).toString()
+      const newContractBalanceInUSD = parseFloat(hre.ethers.utils.formatUnits(
+        newContractBalanceString,
+        'ether'
+      ))
+      const diff: number = (
+        newContractBalanceInUSD - parseFloat(cdContractBalanceBeforeInEther)
+      ) * currentEthPriceInUSD
+      const assertionBalance: number = 2000
+
+      expect(diff.toFixed(4)).to.eq(assertionBalance.toFixed(4))
     })
   })
 })
