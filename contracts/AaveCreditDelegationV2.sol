@@ -63,8 +63,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param asset The address of the asset used in the delegation.
      * @param delegator The address of the creditor.
      * @param delegate The address of the borrower.
+     * @param collateralDeposit The delegator's collateral deposit amount.
      * @param creditLine The amount of credit delegated to the borrower.
-     *
      * @dev -------------------------- TODO --------------------------------
      * MUST CHECK FOR WHETHER STABLE OR VARIABLE TOKEN
      * param _interestRateMode stable = 1, variable = 2
@@ -73,17 +73,20 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param isApproved Does this delegation have an approved borrower?
      * @param hasFullyRepayed Has the borrower repayed their loan?
      * @param hasWithdrawn Has the delegator withdrawn their deposit?
+     * @param createdAt When this delegation was created.
      */
     event DelegationDataCreated(
         address indexed asset,
         address indexed delegator,
         address delegate,
+        uint256 collateralDeposit,
         uint256 creditLine,
         // uint16 interestRateMode,
         uint256 debt,
         bool isApproved,
         bool hasFullyRepayed,
-        bool hasWithdrawn
+        bool hasWithdrawn,
+        uint256 createdAt
     );
 
     /**
@@ -91,8 +94,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param asset The address of the asset used in the delegation.
      * @param delegator The address of the creditor.
      * @param delegate The address of borrower with an uncollateralized loan.
+     * @param collateralDeposit The delegator's collateral deposit amount.
      * @param creditLine The amount of credit delegated to the borrower.
-     *
      * @dev -------------------------- TODO --------------------------------
      * MUST CHECK FOR WHETHER STABLE OR VARIABLE TOKEN
      * param _interestRateMode stable = 1, variable = 2
@@ -101,17 +104,22 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @param isApproved Does this delegation have an approved borrower?
      * @param hasFullyRepayed Has the borrower repayed their loan?
      * @param hasWithdrawn Has the delegator withdrawn their deposit?
+     * @param createdAt When this delegation was created.
+     * @param updatedAt When this delegation was updated.
      */
     event DelegationDataUpdated(
         address indexed asset,
         address indexed delegator,
         address delegate,
+        uint256 collateralDeposit,
         uint256 creditLine,
         // uint16 interestRateMode,
         uint256 debt, // **NEW** debt balance of the borrower that is now owed
         bool isApproved,
         bool hasFullyRepayed,
-        bool hasWithdrawn
+        bool hasWithdrawn,
+        uint256 createdAt,
+        uint256 updatedAt
     );
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -119,7 +127,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     event Deposit(
         address indexed asset,
         address indexed user,
-        uint256 depositAmount
+        uint256 depositAmount // == collateralDeposit
     );
 
     event CreditApproval(
@@ -148,7 +156,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     event Withdrawal(
         address indexed delegator,
         address asset, // address indexed assetToBorrow,
-        uint256 deposit
+        uint256 collateralDeposit
     );
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,10 +165,9 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     /**
      * @dev Initializes a delegation by adding a borrower. Call this function
      *      **AFTER** a delegator has approved a borrower.
-     * @param _asset The address of the asset used in the delegation
+     * @param _asset The address of the asset used in the delegation.
      * @param _delegator The address of the creditor.
-     * @param _delegate The address of borrower with an uncollateralized loan
-     * @param _creditLine The bororwer's limit of total debt
+     * @param _collateralDeposit The delegator's collateral deposit.
      *
      * @dev -------------------------- TODO --------------------------------
      * MUST CHECK FOR WHETHER STABLE OR VARIABLE TOKEN
@@ -170,17 +177,14 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     function initDelegation(
         address _asset,
         address _delegator,
-        address _delegate,
-        uint256 _creditLine // uint16 _interestRateMode
+        uint256 _collateralDeposit
     ) internal {
         // Initialize a delegation object.
         DelegationDataTypes.DelegationData storage delegation =
             _delegations[_delegator];
 
         delegation.asset = _asset;
-        // Set the borrower address to the `delegate` field of the object.
-        delegation.delegate = _delegate;
-        delegation.creditLine = _creditLine;
+        delegation.collateralDeposit = collateralDeposit;
         /**
          * @dev -------------------------- TODO --------------------------------
          * MUST CHECK FOR WHETHER STABLE OR VARIABLE TOKEN
@@ -188,21 +192,62 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
          */
         // delegation.interestRateMode = _interestRateMode;
         delegation.debt = 0;
-        delegation.isApproved = true;
+        delegation.isApproved = false;
         delegation.hasFullyRepayed = false;
         delegation.hasWithdrawn = false;
         delegation.exists = true;
+        // current block timestamp as seconds since unix epoch
+        delegation.createdAt = block.timestamp;
 
         emit DelegationDataCreated(
             delegation.asset,
             _delegator,
             delegation.delegate,
+            delegation.collateralDeposit,
             delegation.creditLine,
             // delegation.interestRateMode,
             delegation.debt,
             delegation.isApproved,
             delegation.hasFullyRepayed,
-            delegation.hasWithdrawn
+            delegation.hasWithdrawn,
+            delegation.createdAt
+        );
+    }
+
+    /**
+     * @dev Add a borrower to the delegation object.
+     * @param _delegator The address of the creditor.
+     * @param _delegate The address of borrower with an uncollateralized loan.
+     * @param _creditLine The borrower's limit of total debt.
+     */
+    function addBorrower(
+        address _delegator,
+        address _delegate,
+        uint256 _creditLine // uint16 _interestRateMode
+    ) internal {
+        // Initialize a delegation object.
+        DelegationDataTypes.DelegationData storage delegation =
+            _delegations[_delegator];
+
+        // Set the borrower address to the `delegate` field of the object.
+        delegation.delegate = _delegate;
+        delegation.creditLine = _creditLine;
+        delegation.isApproved = true;
+        delegation.updatedAt = block.timestamp;
+
+        emit DelegationDataCreated(
+            delegation.asset,
+            _delegator,
+            delegation.delegate,
+            delegation.collateralDeposit,
+            delegation.creditLine,
+            // delegation.interestRateMode,
+            delegation.debt,
+            delegation.isApproved,
+            delegation.hasFullyRepayed,
+            delegation.hasWithdrawn,
+            delegation.createdAt,
+            delegation.updatedAt
         );
     }
 
@@ -218,17 +263,21 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
 
         // Set the borrower address to the `delegate` field of the object.
         delegation.debt = _amountToBorrow;
+        delegation.updatedAt = block.timestamp;
 
         emit DelegationDataUpdated(
             delegation.asset,
             _delegator,
             delegation.delegate,
+            delegation.collateralDeposit,
             delegation.creditLine,
             // delegation.interestRateMode,
             delegation.debt,
             delegation.isApproved,
             delegation.hasFullyRepayed,
-            delegation.hasWithdrawn
+            delegation.hasWithdrawn,
+            delegation.createdAt,
+            delegation.updatedAt
         );
     }
 
@@ -247,16 +296,21 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
 
         if (delegation.debt == 0) delegation.hasFullyRepayed == true;
 
+        delegation.updatedAt = block.timestamp;
+
         emit DelegationDataUpdated(
             delegation.asset,
             _delegator,
             delegation.delegate,
+            delegation.collateralDeposit,
             delegation.creditLine,
             // delegation.interestRateMode,
             delegation.debt,
             delegation.isApproved,
             delegation.hasFullyRepayed,
-            delegation.hasWithdrawn
+            delegation.hasWithdrawn,
+            delegation.createdAt,
+            delegation.updatedAt
         );
     }
 
@@ -275,12 +329,15 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             delegation.asset,
             _delegator,
             delegation.delegate,
+            delegation.collateralDeposit,
             delegation.creditLine,
             // delegation.interestRateMode,
             delegation.debt,
             delegation.isApproved,
             delegation.hasFullyRepayed,
-            delegation.hasWithdrawn
+            delegation.hasWithdrawn,
+            delegation.createdAt,
+            delegation.updatedAt
         );
     }
 
@@ -342,6 +399,9 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         IERC20(_asset).safeApprove(address(lendingPool), _depositAmount);
         lendingPool.deposit(_asset, _depositAmount, address(this), 0);
 
+        // Initialize an delegation object.
+        initDelegation(_asset, delegator, _depositAmount);
+
         // Fetch this event client-side
         emit Deposit(_asset, delegator, _depositAmount);
     }
@@ -397,7 +457,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         // if (stableDebtTokenAddress)
         //    interestRateMode = 1;
 
-        initDelegation(_asset, delegator, _delegate, _creditLine);
+        addBorrower(delegator, _delegate, _creditLine);
 
         emit CreditApproval(delegator, _delegate, _creditLine, _asset);
     }
@@ -585,7 +645,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         // uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
 
         // Force the delegator to withdraw their entire collateral deposit.
-        uint256 assetBalance = _delegations[delegator].creditLine;
+        uint256 assetBalance = _delegations[delegator].collateralDeposit;
 
         lendingPool.withdraw(_asset, assetBalance, delegator);
 
