@@ -431,7 +431,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         );
         // Ensure the delegation between this delegator and delegate exists
         require(
-            _delegations[delegator].exists = true,
+            _delegations[_delegator].exists = true,
             "This delegation does not yet exist!"
         );
         require(
@@ -521,7 +521,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         );
         // Ensure the delegation between this delegator and delegate exists
         require(
-            _delegations[delegator].exists = true,
+            _delegations[_delegator].exists = true,
             "This delegation does not yet exist!"
         );
         require(
