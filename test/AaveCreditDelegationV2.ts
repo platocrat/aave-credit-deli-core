@@ -265,6 +265,20 @@ describe('AaveCreditDelegationV2', () => {
       const assetToRepay: string = daiAddress
       const repayAmount = amountToBorrowInWei
 
+      /**
+       * @TODO ------------------------------ TODO -------------------------------
+       * Test to ensure that the CD contract has 0 DAI and aDAI balance after
+       * repaying the borrower.
+       * -------------------------------------------------------------------------
+       */
+      console.log(
+        'CD contract DAI balance in USD before withdrawal: ',
+        parseFloat(hre.ethers.utils.formatUnits(
+          (cdContractBalanceBefore).toString(),
+          'ether'
+        )) * currentEthPriceInUSD
+      )
+
       // 2. Borrower calls function to repay uncollateralized loan.
       await aaveCreditDelegationV2.connect(borrowerSigner).repayBorrower(
         delegator,
@@ -280,15 +294,62 @@ describe('AaveCreditDelegationV2', () => {
         cdContractBalanceAfterRepayment
       )
 
+      /**
+       * @TODO ------------------------------ TODO -------------------------------
+       * Test to ensure that the CD contract has 0 DAI and aDAI balance after
+       * repaying the borrower.
+       * -------------------------------------------------------------------------
+       */
+      console.log(
+        'CD contract DAI balance in USD before withdrawal: ',
+        parseFloat(hre.ethers.utils.formatUnits(
+          (cdContractBalanceAfterRepayment).toString(),
+          'ether'
+        )) * currentEthPriceInUSD
+      )
+
       expect(diff).to.eq(repayAmount)
     })
 
     it('delegator should withdraw their entire collateral deposit', async () => {
       const assetToWithdraw = daiAddress
+      const balanceBefore = await dai.balanceOf(delegator)
 
-      await aaveCreditDelegationV2.connect(depositorSigner).withdraw(
+      /**
+       * @TODO ------------------------------ TODO -------------------------------
+       * Test to ensure that the delegator can withdraw the collateral
+       * deposit amount in full.
+       * -------------------------------------------------------------------------
+       */
+      console.log(
+        'Delegator DAI balance in USD before withdrawal: ',
+        parseFloat(hre.ethers.utils.formatUnits(
+          (balanceBefore).toString(),
+          'ether'
+        )) * currentEthPriceInUSD
+      )
+
+      await aaveCreditDelegationV2.connect(depositorSigner).withdrawCollateral(
         assetToWithdraw
       )
+
+      const balanceAfter = await dai.balanceOf(delegator)
+      const diff = balanceAfter.sub(balanceBefore)
+
+      /**
+       * @TODO ------------------------------ TODO -------------------------------
+       * Test to ensure that the delegator can withdraw the collateral
+       * deposit amount in full.
+       * -------------------------------------------------------------------------
+       */
+      console.log(
+        'Delegator DAI balance in USD after withdrawal: ',
+        parseFloat(
+          hre.ethers.utils.formatUnits(balanceAfter, 'ether')
+        ) * currentEthPriceInUSD
+      )
+
+      expect(diff).to.eq(amountToWei(depositAmount))
     })
   })
 
