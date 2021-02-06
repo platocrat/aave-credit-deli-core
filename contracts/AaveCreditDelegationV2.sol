@@ -191,6 +191,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         delegation.isApproved = true;
         delegation.hasFullyRepayed = false;
         delegation.hasWithdrawn = false;
+        delegation.exists = true;
 
         emit DelegationDataCreated(
             delegation.asset,
@@ -402,8 +403,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     }
 
     /**
-     * @dev Let a delegate borrow an amount that was lended to them from a
-     *      delegator.
+     * Let a delegate borrow an amount that was lended to them from a
+     * delegator.
      * @notice NOTE: this contract holds and manages a delegate's funds on
      *         behalf of them.
      * @param _assetToBorrow         The address for the asset.
@@ -427,6 +428,11 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         require(
             isBorrower[delegate],
             "Only a delegate can borrow from the Aave lending pool!"
+        );
+        // Ensure the delegation between this delegator and delegate exists
+        require(
+            _delegations[delegator].exists = true,
+            "This delegation does not yet exist!"
         );
         require(
             _delegations[_delegator].delegate == delegate,
@@ -494,6 +500,11 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * You should keep internal accounting of borrowers, if your contract
      * will have multiple borrowers.
      * -------------------------------------------------------------------------
+     *
+     * @dev -------------------------- TODO ------------------------------------
+     * How does the borrower get to keep any profits made from using the
+     * borrowed funds?
+     * -------------------------------------------------------------------------
      */
     function repayBorrower(
         address _delegator,
@@ -508,19 +519,26 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             isBorrower[delegate] == true,
             "Only approved borrowers can repay an uncollateralized loan!"
         );
-        // Only a borrower with a delegation can repay a loan.
+        // Ensure the delegation between this delegator and delegate exists
+        require(
+            _delegations[delegator].exists = true,
+            "This delegation does not yet exist!"
+        );
         require(
             _delegations[_delegator].delegate == delegate,
             "Only a borrower with a delegation can repay a loan!"
         );
-        // Only a borrower with a delegation can repay a loan.
         require(
             !_delegations[_delegator].hasFullyRepayed,
             "You cannot repay a loan that is already fully repayed!"
         );
+        require(
+            _repayAmount <= _delegations[_delegator].debt,
+            "You cannot repay more than your total outstanding debt!"
+        );
 
         /**
-         * @dev -------------------------- TODO ------------------------------------
+         * @dev -------------------------- TODO --------------------------------
          * When is the `borrowerAllowances` set?
          */
         // if (borrowerAllowances[msg.sender]) {}
@@ -539,24 +557,35 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     }
 
     /**
-     * Withdraw all collateral of an underlying asset, only if no outstanding
-     * loans delegated.
+     * Withdraw all collateral of an underlying asset.
+     * @notice There is potential
      * @param _asset The underlying asset to withdraw.
      */
     function withdrawCollateral(address _asset) public {
         address delegator;
         delegator = msg.sender;
 
-        // Only a delegator should be able to withdraw their collateral!
         require(
             !isBorrower[delegator],
             "Only a delegator should be able to withdraw their collateral!"
         );
-        // Only if no outstanding loans delegated
+        // Ensure the delegation between this delegator and delegate exists
+        require(
+            _delegations[delegator].exists = true,
+            "This delegation does not yet exist!"
+        );
+        require(
+            _delegations[delegator].hasWithdrawn == false,
+            "You have already withdrawn the collateral for this delegation!"
+        );
 
-        (address aTokenAddress, , ) =
-            dataProvider.getReserveTokensAddresses(_asset);
-        uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
+        // // Only if no outstanding loans delegated
+        // (address aTokenAddress, , ) =
+        //     dataProvider.getReserveTokensAddresses(_asset);
+        // uint256 assetBalance = IERC20(aTokenAddress).balanceOf(address(this));
+
+        // Force the delegator to withdraw their entire collateral deposit.
+        uint256 assetBalance = _delegations[delegator].creditLine;
 
         lendingPool.withdraw(_asset, assetBalance, delegator);
 
