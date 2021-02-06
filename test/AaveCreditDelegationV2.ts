@@ -254,7 +254,7 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     /** @notice PASSES */
-    it('delegate should repay borrowed funds', async () => {
+    it('delegate should fully repay borrowed funds using funds from CD contract', async () => {
       // 1. Borrower sets `_canPullFundFromDelegate` to false.
       setCanPullFundsFromDelegate(false)
 
@@ -281,6 +281,14 @@ describe('AaveCreditDelegationV2', () => {
       )
 
       expect(diff).to.eq(repayAmount)
+    })
+
+    it('delegator should withdraw their entire collateral deposit', async () => {
+      const assetToWithdraw = daiAddress
+
+      await aaveCreditDelegationV2.connect(depositorSigner).withdraw(
+        assetToWithdraw
+      )
     })
   })
 
