@@ -159,6 +159,7 @@ describe('AaveCreditDelegationV2', () => {
         // aDAI balance in ether
         cdContractBalanceBeforeInEther = hre
           .ethers.utils.formatUnits(cdContractBalanceBefore, 'ether'),
+        // Amount to borrow == 1,000 DAI
         amountToBorrowInWei = amountToWei(depositAmount * 0.5)
     })
 
@@ -274,6 +275,13 @@ describe('AaveCreditDelegationV2', () => {
       console.log(
         'CD contract DAI balance in USD before withdrawal: ',
         parseFloat(hre.ethers.utils.formatUnits(
+          (await aDai.balanceOf(aaveCreditDelegationV2.address)).toString(),
+          'ether'
+        )) * currentEthPriceInUSD
+      )
+      console.log(
+        'CD contract aDAI balance in USD before withdrawal: ',
+        parseFloat(hre.ethers.utils.formatUnits(
           (cdContractBalanceBefore).toString(),
           'ether'
         )) * currentEthPriceInUSD
@@ -301,9 +309,16 @@ describe('AaveCreditDelegationV2', () => {
        * -------------------------------------------------------------------------
        */
       console.log(
-        'CD contract DAI balance in USD before withdrawal: ',
+        'CD contract DAI balance in USD after withdrawal: ',
         parseFloat(hre.ethers.utils.formatUnits(
           (cdContractBalanceAfterRepayment).toString(),
+          'ether'
+        )) * currentEthPriceInUSD
+      )
+      console.log(
+        'CD contract aDAI balance in USD after withdrawal: ',
+        parseFloat(hre.ethers.utils.formatUnits(
+          (await aDai.balanceOf(aaveCreditDelegationV2.address)).toString(),
           'ether'
         )) * currentEthPriceInUSD
       )
@@ -328,6 +343,13 @@ describe('AaveCreditDelegationV2', () => {
           'ether'
         )) * currentEthPriceInUSD
       )
+      console.log(
+        'Delegator aDAI balance in USD before withdrawal: ',
+        parseFloat(hre.ethers.utils.formatUnits(
+          (await aDai.balanceOf(delegator)).toString(),
+          'ether'
+        )) * currentEthPriceInUSD
+      )
 
       await aaveCreditDelegationV2.connect(depositorSigner).withdrawCollateral(
         assetToWithdraw
@@ -347,6 +369,13 @@ describe('AaveCreditDelegationV2', () => {
         parseFloat(
           hre.ethers.utils.formatUnits(balanceAfter, 'ether')
         ) * currentEthPriceInUSD
+      )
+      console.log(
+        'Delegator DAI balance in USD after withdrawal: ',
+        parseFloat(hre.ethers.utils.formatUnits(
+          (await aDai.balanceOf(delegator)).toString(),
+          'ether'
+        )) * currentEthPriceInUSD
       )
 
       expect(diff).to.eq(amountToWei(depositAmount))
