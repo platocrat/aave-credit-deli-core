@@ -184,7 +184,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
             _delegations[_delegator];
 
         delegation.asset = _asset;
-        delegation.collateralDeposit = collateralDeposit;
+        delegation.collateralDeposit = _collateralDeposit;
         /**
          * @dev -------------------------- TODO --------------------------------
          * MUST CHECK FOR WHETHER STABLE OR VARIABLE TOKEN
@@ -235,7 +235,7 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         delegation.isApproved = true;
         delegation.updatedAt = block.timestamp;
 
-        emit DelegationDataCreated(
+        emit DelegationDataUpdated(
             delegation.asset,
             _delegator,
             delegation.delegate,
