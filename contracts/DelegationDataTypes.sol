@@ -27,6 +27,7 @@ library DelegationDataTypes {
         bool isApproved; // Does this delegation have an approved borrower?
         bool hasFullyRepayed; // Has the borrower repayed their loan?
         bool hasWithdrawn; // Has the delegator withdrawn their deposit?
+        bool exists; // Does this delegation exist?.
     }
 
     /**
