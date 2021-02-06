@@ -28,7 +28,6 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
 
     address contractOwner;
 
-    // Use of `public` keyword is not needed.
     constructor() {
         contractOwner = msg.sender;
     }
@@ -49,12 +48,19 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * @dev Change these addresses to Mainnet addresses when testing with forked
      * networks in hardhat. Use Kovan when testing UI.
      */
+    address constant lendingPoolMainnetAddress =
+        0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9;
+    address constant protocolDataProviderMainnetAddress =
+        0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d;
+    // address constant lendingPoolKovanAddress =
+    //     ;
+    // address constant protocolDataProviderKovanAddress =
+    //     ;
+
     ILendingPool constant lendingPool =
-        ILendingPool(address(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9)); // Mainnet
+        ILendingPool(address(lendingPoolMainnetAddress));
     IProtocolDataProvider constant dataProvider =
-        IProtocolDataProvider(
-            address(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d)
-        ); // Mainnet
+        IProtocolDataProvider(address(protocolDataProviderMainnetAddress));
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // ~~~~~~~~~~~~~~~~~~~~~~  Delegation logic events  ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -362,6 +368,106 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
     //             return Creditors[_delegator][i].debt;
     //     }
     // }
+
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    // ~~~~~~~~~~~~~~~~~~~  Requirement-check functions  ~~~~~~~~~~~~~~~~~~~~~~~
+
+    function checkCaller(address _caller, bool _isDelegator) internal view {
+        if (_isDelegator) {
+            require(
+                !isBorrower[_caller],
+                "Only a delegator can call this function!"
+            );
+        } else {
+            require(
+                isBorrower[_caller],
+                "Only a delegate can call this function!"
+            );
+        }
+    }
+
+    function checkDelegationExistsWithDelegate(
+        address _delegator,
+        address _delegate
+    ) internal view {
+        require(
+            _delegations[_delegator].exists == true,
+            "This delegation does not yet exist!"
+        );
+        require(
+            _delegations[_delegator].delegate == _delegate,
+            "A delegation does not yet exist between this delegate and delegator!"
+        );
+    }
+
+    function checkDelegationExists(address _delegator) internal view {
+        require(
+            _delegations[_delegator].exists == true,
+            "This delegation does not yet exist!"
+        );
+    }
+
+    function checkDelegateApprovalRequirements(address _delegator)
+        internal
+        view
+    {
+        // The current `_delegations` object mapping only allows for 1 delegate
+        // per delegator.
+        require(
+            _delegations[_delegator].isApproved == false,
+            "A delegator can only have 1 approved borrower at a time!"
+        );
+    }
+
+    function checkDelegateBorrowRequirements(
+        address _delegator,
+        uint256 _amountToBorrowInWei
+    ) internal view {
+        require(
+            _delegations[_delegator].debt == 0,
+            "Delegates can only borrow with 0 debt!"
+        );
+        require(
+            _delegations[_delegator].hasFullyRepayed == false,
+            "This loan has been fully repayed. \n A new delegation is required to borrow again!"
+        );
+        require(
+            _delegations[_delegator].creditLine <= _amountToBorrowInWei,
+            "You can only borrow an amount <= your delegated credit line!"
+        );
+    }
+
+    function checkLoanRepaymentRequirements(
+        address _delegator,
+        uint256 _repayAmount
+    ) internal view {
+        require(
+            !_delegations[_delegator].hasFullyRepayed,
+            "You cannot repay a loan that is already fully repayed!"
+        );
+        require(
+            _repayAmount <= _delegations[_delegator].debt,
+            "You cannot repay more than your total outstanding debt!"
+        );
+    }
+
+    function checkDelegatorWithdrawalRequirements(address _delegator)
+        internal
+        view
+    {
+        require(
+            _delegations[_delegator].hasWithdrawn == false,
+            "You have already withdrawn the collateral for this delegation!"
+        );
+        require(
+            _delegations[_delegator].debt == 0,
+            "There is still an outstanding debt for this delegation!"
+        );
+    }
+
+    // function checkOutstandingDebtRequirements() internal {}
+
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     // ~~~~~~~~~~~~~~~~~~~~~~  Core contract functions  ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -369,8 +475,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * Deposits collateral into Aave lending pool to enable credit delegation.
      * @notice User must have approved this contract to pull funds with a call
      *         to the `setCanPullFundsFromDelegator()` function above.
-     * @param _asset                  The asset to be deposited as collateral.
-     * @param _depositAmount          The amount to be deposited as collateral.
+     * @param _asset                     The asset to be deposited as collateral.
+     * @param _depositAmount             The amount to be deposited as collateral.
      * @param _canPullFundsFromDelegator Boolean value set by user on UI.
      */
     function depositCollateral(
@@ -381,11 +487,9 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         address delegator;
         delegator = msg.sender;
 
-        // Ensure that this function is only called by the delegator.
-        require(
-            isBorrower[delegator] == false,
-            "Only a delegator can deposit collateral!"
-        );
+        // Only a delegator can deposit collateral!
+        checkCaller(delegator, true);
+
         // Boolean value is set by calling `setCanPullFundsFromCaller()`
         if (_canPullFundsFromDelegator) {
             IERC20(_asset).safeTransferFrom(
@@ -422,16 +526,8 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         delegator = msg.sender;
 
         // Only a delegator should be able to approve borrowers!
-        require(
-            !isBorrower[delegator],
-            "Only a delegator can approve borrowers!"
-        );
-        // The current `_delegations` object mapping only allows for 1 delegate
-        // per delegator.
-        require(
-            _delegations[delegator].isApproved == false,
-            "A delegator can only have 1 approved borrower at a time!"
-        );
+        checkCaller(delegator, true);
+        checkDelegateApprovalRequirements(delegator);
 
         /**
          * @dev -------------------------- TODO --------------------------------
@@ -485,31 +581,11 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         address delegate;
         delegate = msg.sender;
 
-        require(
-            isBorrower[delegate],
-            "Only a delegate can borrow from the Aave lending pool!"
-        );
+        // Only a delegate can borrow from the Aave lending pool!
+        checkCaller(delegate, false);
         // Ensure the delegation between this delegator and delegate exists
-        require(
-            _delegations[_delegator].exists = true,
-            "This delegation does not yet exist!"
-        );
-        require(
-            _delegations[_delegator].delegate == delegate,
-            "This delegator has not yet approved you as a borrower!"
-        );
-        require(
-            _delegations[_delegator].debt == 0,
-            "Delegates can only borrow with 0 debt!"
-        );
-        require(
-            _delegations[_delegator].hasFullyRepayed == false,
-            "This loan has been fully repayed. \n A new delegation is required to borrow again!"
-        );
-        require(
-            _delegations[_delegator].creditLine <= _amountToBorrowInWei,
-            "You can only borrow an amount <= your delegated credit line!"
-        );
+        checkDelegationExistsWithDelegate(_delegator, delegate);
+        checkDelegateBorrowRequirements(_delegator, _amountToBorrowInWei);
 
         /**
          * @dev Advice from David from Aave:
@@ -546,10 +622,12 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
      * Repay an uncollaterised loan (for use by approved borrowers). Approved
      * borrowers must have approved this contract, a priori, with an allowance
      * to transfer the tokens.
-     * @param _delegator   The creditor to whom the borrower is repaying a loan
-     *                     for.
-     * @param _repayAmount The amount to repay.
-     * @param _asset       The asset to be repaid.
+     * @param _delegator                The creditor to whom the borrower is
+     *                                  repaying a loan for.
+     * @param _repayAmount              The amount to repay.
+     * @param _asset                    The asset to be repaid.
+     * @param _canPullFundsFromDelegate Whether the contract can pull funds from
+     *                                  the delegate.
      *
      * @dev -------------------------- TODO ------------------------------------
      * User calling this function must have approved this contract with an
@@ -575,27 +653,11 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         address delegate;
         delegate = msg.sender;
 
-        require(
-            isBorrower[delegate] == true,
-            "Only approved borrowers can repay an uncollateralized loan!"
-        );
+        // Only approved borrowers can repay an uncollateralized loan!
+        checkCaller(delegate, false);
         // Ensure the delegation between this delegator and delegate exists
-        require(
-            _delegations[_delegator].exists = true,
-            "This delegation does not yet exist!"
-        );
-        require(
-            _delegations[_delegator].delegate == delegate,
-            "Only a borrower with a delegation can repay a loan!"
-        );
-        require(
-            !_delegations[_delegator].hasFullyRepayed,
-            "You cannot repay a loan that is already fully repayed!"
-        );
-        require(
-            _repayAmount <= _delegations[_delegator].debt,
-            "You cannot repay more than your total outstanding debt!"
-        );
+        checkDelegationExistsWithDelegate(_delegator, delegate);
+        checkLoanRepaymentRequirements(_delegator, _repayAmount);
 
         /**
          * @dev -------------------------- TODO --------------------------------
@@ -625,19 +687,12 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         address delegator;
         delegator = msg.sender;
 
-        require(
-            !isBorrower[delegator],
-            "Only a delegator should be able to withdraw their collateral!"
-        );
-        // Ensure the delegation between this delegator and delegate exists
-        require(
-            _delegations[delegator].exists = true,
-            "This delegation does not yet exist!"
-        );
-        require(
-            _delegations[delegator].hasWithdrawn == false,
-            "You have already withdrawn the collateral for this delegation!"
-        );
+        // Only a delegator should be able to withdraw their collateral!
+        checkCaller(delegator, true);
+        // Ensure the delegation exists
+        checkDelegationExists(delegator);
+        checkDelegatorWithdrawalRequirements(delegator);
+        // checkOutstandingDebtRequirements(delegator)
 
         // // Only if no outstanding loans delegated
         // (address aTokenAddress, , ) =
