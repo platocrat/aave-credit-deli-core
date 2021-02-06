@@ -114,10 +114,10 @@ describe('AaveCreditDelegationV2', () => {
    */
   describe("deposit collateral with delegator's funds", async () => {
     let balanceBefore: BigNumber,
-      cdContractBalanceBefore: BigNumber,
+      cdContract_aDaiBalanceBefore: BigNumber,
       delegatorBalanceBefore: BigNumber,
       balanceBeforeInEther: string,
-      cdContractBalanceBeforeInEther: string,
+      cdContract_aDaiBalanceBeforeInEther: string,
       delegatorBalanceBeforeInEther: string,
       canPullFundsFromDelegator: boolean,
       canPullFundsFromDelegate: boolean,
@@ -148,12 +148,12 @@ describe('AaveCreditDelegationV2', () => {
         delegatorBalanceBeforeInEther = hre
           .ethers.utils.formatUnits(delegatorBalanceBefore, 'ether'),
         // aDAI balance in wei
-        cdContractBalanceBefore = await aDai.balanceOf(
+        cdContract_aDaiBalanceBefore = await aDai.balanceOf(
           aaveCreditDelegationV2.address
         ),
         // aDAI balance in ether
-        cdContractBalanceBeforeInEther = hre
-          .ethers.utils.formatUnits(cdContractBalanceBefore, 'ether'),
+        cdContract_aDaiBalanceBeforeInEther = hre
+          .ethers.utils.formatUnits(cdContract_aDaiBalanceBefore, 'ether'),
         // Amount to borrow == 1,000 DAI
         amountToBorrowInWei = amountToWei(depositAmount * 0.5)
     })
@@ -212,7 +212,7 @@ describe('AaveCreditDelegationV2', () => {
         'ether'
       ))
       const diff: number = (
-        newContractBalanceInUSD - parseFloat(cdContractBalanceBeforeInEther)
+        newContractBalanceInUSD - parseFloat(cdContract_aDaiBalanceBeforeInEther)
       ) * currentEthPriceInUSD
       const assertionBalance: number = 2000
 
@@ -237,6 +237,10 @@ describe('AaveCreditDelegationV2', () => {
         interestRateMode = 1, // using the DAI stablecoin
         referralCode = 0  // no referral code
 
+      const cdContract_DaiBalanceBefore = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
+
       // 1. Delegator approves the delegate for a line of credit,
       //    which is a percentage of the delegator's collateral deposit.
       await aaveCreditDelegationV2.connect(depositorSigner).approveBorrower(
@@ -260,7 +264,7 @@ describe('AaveCreditDelegationV2', () => {
         aaveCreditDelegationV2.address
       )
       const diff: BigNumber = cdContractBalanceAfterBorrow.sub(
-        cdContractBalanceBefore
+        cdContract_DaiBalanceBefore
       )
 
       expect(diff.toString()).to.eq(amountToBorrowInWei)
@@ -285,7 +289,7 @@ describe('AaveCreditDelegationV2', () => {
       // 1. Borrower sets `_canPullFundFromDelegate` to false.
       setCanPullFundsFromDelegate(false)
 
-      cdContractBalanceBefore = await dai.balanceOf(
+      const cdContract_DaiBalanceBefore = await dai.balanceOf(
         aaveCreditDelegationV2.address
       )
 
@@ -303,7 +307,7 @@ describe('AaveCreditDelegationV2', () => {
       const cdContractBalanceAfterRepayment: BigNumber = await dai.balanceOf(
         aaveCreditDelegationV2.address
       )
-      const diff: BigNumber = cdContractBalanceBefore.sub(
+      const diff: BigNumber = cdContract_DaiBalanceBefore.sub(
         cdContractBalanceAfterRepayment
       )
 
@@ -349,10 +353,10 @@ describe('AaveCreditDelegationV2', () => {
    */
   describe("deposit collateral with contract's funds", async () => {
     let balanceBefore: BigNumber,
-      cdContractBalanceBefore: BigNumber,
+      cdContract_aDaiBalanceBefore: BigNumber,
       contractDaiBalanceBeforeToSubtract: BigNumber,
       balanceBeforeInEther: string,
-      cdContractBalanceBeforeInEther: string,
+      cdContract_aDaiBalanceBeforeInEther: string,
       canPullFundsFromDelegator: boolean,
       canPullFundsFromDelegate: boolean,
       assetToBorrow: string, // address
@@ -397,15 +401,15 @@ describe('AaveCreditDelegationV2', () => {
       // DAI balances in wei
       balanceBefore = await dai.balanceOf(aaveCreditDelegationV2.address),
         // aDAI balance in wei
-        cdContractBalanceBefore = await aDai.balanceOf(
+        cdContract_aDaiBalanceBefore = await aDai.balanceOf(
           aaveCreditDelegationV2.address
         ),
         // DAI balances in ether
         balanceBeforeInEther = hre
           .ethers.utils.formatUnits(balanceBefore, 'ether'),
         // aDAI balance in ether
-        cdContractBalanceBeforeInEther = hre
-          .ethers.utils.formatUnits(cdContractBalanceBefore, 'ether'),
+        cdContract_aDaiBalanceBeforeInEther = hre
+          .ethers.utils.formatUnits(cdContract_aDaiBalanceBefore, 'ether'),
         // Amount to borrow == 1,000 DAI
         amountToBorrowInWei = amountToWei(depositAmount * 0.5)
     })
@@ -461,7 +465,7 @@ describe('AaveCreditDelegationV2', () => {
         'ether'
       ))
       const diff: number = (
-        newContractBalanceInUSD - parseFloat(cdContractBalanceBeforeInEther)
+        newContractBalanceInUSD - parseFloat(cdContract_aDaiBalanceBeforeInEther)
       ) * currentEthPriceInUSD
       const assertionBalance: number = 2000
 
@@ -486,6 +490,10 @@ describe('AaveCreditDelegationV2', () => {
         interestRateMode = 1, // using the DAI stablecoin
         referralCode = 0  // no referral code
 
+      const cdContract_DaiBalanceBefore = await dai.balanceOf(
+        aaveCreditDelegationV2.address
+      )
+
       // 1. Delegator approves the delegate for a line of credit,
       //    which is a percentage of the delegator's collateral deposit.
       await aaveCreditDelegationV2.connect(depositorSigner).approveBorrower(
@@ -509,7 +517,7 @@ describe('AaveCreditDelegationV2', () => {
         aaveCreditDelegationV2.address
       )
       const diff: BigNumber = cdContractBalanceAfterBorrow.sub(
-        cdContractBalanceBefore
+        cdContract_DaiBalanceBefore
       )
 
       expect(diff.toString()).to.eq(amountToBorrowInWei)
@@ -534,7 +542,7 @@ describe('AaveCreditDelegationV2', () => {
       // 1. Borrower sets `_canPullFundFromDelegate` to false.
       setCanPullFundsFromDelegate(false)
 
-      cdContractBalanceBefore = await dai.balanceOf(
+      const cdContract_DaiBalanceBefore = await dai.balanceOf(
         aaveCreditDelegationV2.address
       )
 
@@ -552,7 +560,7 @@ describe('AaveCreditDelegationV2', () => {
       const cdContractBalanceAfterRepayment: BigNumber = await dai.balanceOf(
         aaveCreditDelegationV2.address
       )
-      const diff: BigNumber = cdContractBalanceBefore.sub(
+      const diff: BigNumber = cdContract_DaiBalanceBefore.sub(
         cdContractBalanceAfterRepayment
       )
 
