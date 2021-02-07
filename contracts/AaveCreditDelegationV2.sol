@@ -65,7 +65,12 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
 
     // ~~~~~~~~~~~~~~~~~~~~~~  Delegation logic events  ~~~~~~~~~~~~~~~~~~~~~~~~
     /**
-     * @dev Emitted when a delegation is created.
+     * @dev -------------------------- TODO ---------------------------------
+     * Simplify all event objects by passing in the whole `delegation` object
+     * into each event. Then, use only what is needed for each event
+     * ----------------------------------------------------------------------
+     *
+     * Emitted when a delegation is created.
      * @param asset The address of the asset used in the delegation.
      * @param delegator The address of the creditor.
      * @param delegate The address of the borrower.
