@@ -10,7 +10,7 @@
   "include": [
     "./scripts",
     "./test",
-    "./typechain",
+    "contract-types",
     "./*.ts"
 , "types"  ],
   "files": [
