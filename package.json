@@ -11,9 +11,6 @@
     "hardhat": "^2.0.8"
   },
   "devDependencies": {
-    "@ethersproject/bignumber": "^5.0.13",
-    "@ethersproject/contracts": "^5.0.9",
-    "@ethersproject/providers": "^5.0.19",
     "@nomiclabs/hardhat-ethers": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@types/chai": "^4.2.14",
