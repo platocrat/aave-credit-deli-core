@@ -666,10 +666,14 @@ contract AaveCreditDelegationV2 is CreditDeliStorage {
         // if (borrowerAllowances[msg.sender]) {}
 
         if (_canPullFundsFromDelegate) {
-            IERC20(_asset).transferFrom(delegate, address(this), _repayAmount);
+            IERC20(_asset).safeTransferFrom(
+                delegate,
+                address(this),
+                _repayAmount
+            );
         }
 
-        IERC20(_asset).approve(address(lendingPool), _repayAmount);
+        IERC20(_asset).safeApprove(address(lendingPool), _repayAmount);
         lendingPool.repay(_asset, _repayAmount, 1, address(this));
 
         // Update the state of the delegation object.
