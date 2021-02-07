@@ -13,8 +13,8 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Contract } from '@ethersproject/contracts'
 import { JsonRpcSigner } from '@ethersproject/providers'
 
-import { Dai } from '../contract-types/contracts/Dai'
-import { AToken } from '../contract-types/contracts/AToken'
+import { Dai } from '../contract-types/Dai'
+import { AToken } from '../contract-types/AToken'
 
 const ETH_URL: string = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
 
