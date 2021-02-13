@@ -1,10 +1,3 @@
-/**
- * @TODO -----------------------------------------------------------------------
- * "Always code [CONCISELY, CLEARLY, and READABLY] as if the guy who ends up 
- * maintaining your code will be a violent psychopath who knows where you 
- * live." - John Woods
- *-----------------------------------------------------------------------------
- */
 import fetch from 'node-fetch'
 import { expect } from "chai"
 import hre from 'hardhat'
@@ -13,8 +6,8 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Contract } from '@ethersproject/contracts'
 import { JsonRpcSigner } from '@ethersproject/providers'
 
-import { Dai } from '../typechain/contracts/Dai'
-import { AToken } from '../typechain/contracts/AToken'
+import { Dai } from '../contract-types/Dai'
+import { AToken } from '../contract-types/AToken'
 
 const ETH_URL: string = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
 
@@ -106,11 +99,7 @@ describe('AaveCreditDelegationV2', () => {
   })
 
   /** 
-   * ---------------------------------------------------------------------------
-   * @dev When delegator doesn't allow the CD contract to pull funds from their
-   *      account.
    * @notice PASSES 
-   * ---------------------------------------------------------------------------
    */
   describe("deposit collateral with delegator's funds", async () => {
     let balanceBefore: BigNumber,
@@ -167,9 +156,6 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     /** 
-     * Delegator DAI balance before deposit = 8415.650000000001
-     * Delegator DAI balance after deposit = 6415.650000000001
-     * 
      * @notice PASSES 
      */
     it('delegator should have 2,000 less DAI after depositing collateral', async () => {
@@ -198,9 +184,6 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     /** 
-     * CD contract DAI balance after deposit = 0
-     * CD contract aDAI balance after deposit = 2000
-     * 
      * @notice PASSES
      */
     it('CD contract should now hold 2000 aDAI', async () => {
@@ -220,16 +203,6 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     /** 
-     * --Before--:
-     * CD contract DAI balance before borrow = 0
-     * CD contract aDAI balance before borrow = 2000.0000013156218
-     * 
-     * --After--:
-     * CD contract DAI balance after borrow =  (+1000) 1000
-     * CD contract aDAI balance after borrow =  (=) 2000.0000026312434
-     * 
-     * @dev Borrowing 50% of the delegated credit amount. Borrowed funds sent to
-     *      the CD contract's address and NOT to the delegator's address.
      * @notice PASSES 
      */
     it("delegate should borrow 50% of delegator's deposit amount from lending pool", async () => {
@@ -271,18 +244,6 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     /** 
-     * --Before--:
-     * CD contract DAI balance in USD before repayment =  1000
-     * CD contract aDAI balance in USD before repayment =  2000.0000026312441
-     * Delegator contract DAI balance in USD before repayment =  6457.95
-     * Delegator contract aDAI balance in USD before repayment =  0
-     * 
-     * --After--:
-     * CD contract DAI balance in USD after repayment =  (=) 0
-     * CD contract aDAI balance in USD after repayment =  (=) 2000.0000039468698
-     * Delegator contract DAI balance in USD after repayment =  (=) 6457.95
-     * Delegator contract aDAI balance in USD after repayment =  0
-     * 
      * @notice PASSES 
      */
     it("delegate should fully repay borrowed funds using CD contract's funds", async () => {
@@ -316,18 +277,6 @@ describe('AaveCreditDelegationV2', () => {
 
 
     /**
-     * --Before--:
-     * CD contract DAI balance in USD before withdrawal =  0
-     * CD contract aDAI balance in USD before withdrawal =  2000.0000039468748
-     * Delegator DAI balance in USD before withdrawal =  6457.95
-     * Delegator aDAI balance in USD before withdrawal =  0
-     * 
-     * --After--:
-     * CD contract DAI balance in USD after withdrawal =  (=) 0
-     * CD contract aDAI balance in USD after withdrawal =  (-2000) 0.00000526256755246156
-     * Delegator DAI balance in USD after withdrawal =  (2000) 8457.95
-     * Delegator aDAI balance in USD after withdrawal =  0
-     * 
      * @notice PASSES
      */
     it('delegator should withdraw their entire collateral deposit', async () => {
@@ -346,10 +295,7 @@ describe('AaveCreditDelegationV2', () => {
   })
 
   /** 
-   * ---------------------------------------------------------------------------
-   * @dev Test when the delegator sets `canPull` to `false`
    * @notice PASSES
-   * ---------------------------------------------------------------------------
    */
   describe("deposit collateral with contract's funds", async () => {
     let balanceBefore: BigNumber,
@@ -369,16 +315,6 @@ describe('AaveCreditDelegationV2', () => {
       // ecosystem). If there is no referral code, use `0`.
       referralCode: number
 
-    /**
-     * @TODO ------------------------------ TODO -------------------------------
-     * Add an easy radio switch directly above or next to the the `deposit` 
-     * button (to deposit collateral) which disables the `deposit` button when
-     * switched off, and enables deposits when switched on.
-     * -------------------------------------------------------------------------
-     */
-    // This function is called by the UI when the delegator flips the radio 
-    // switch, thus allowing for the UI to pull funds from their wallet and 
-    // enabling the `deposit` button.
     function setCanPullFundsFromDelegator(_canPull: boolean) {
       canPullFundsFromDelegator = _canPull
     }
@@ -473,16 +409,6 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     /** 
-     * --Before--:
-     * CD contract DAI balance before borrow = 0
-     * CD contract aDAI balance before borrow = 2000.0000013156218
-     * 
-     * --After--:
-     * CD contract DAI balance after borrow =  (+1000) 1000
-     * CD contract aDAI balance after borrow =  (=) 2000.0000026312434
-     * 
-     * @dev Borrowing 50% of the delegated credit amount. Borrowed funds sent to
-     *      the CD contract's address and NOT to the delegator's address.
      * @notice PASSES 
      */
     it("delegate should borrow 50% of delegator's deposit amount from lending pool", async () => {
@@ -524,18 +450,6 @@ describe('AaveCreditDelegationV2', () => {
     })
 
     /** 
-     * --Before--:
-     * CD contract DAI balance in USD before repayment =  1000
-     * CD contract aDAI balance in USD before repayment =  2000.0000026312441
-     * Delegator contract DAI balance in USD before repayment =  6457.95
-     * Delegator contract aDAI balance in USD before repayment =  0
-     * 
-     * --After--:
-     * CD contract DAI balance in USD after repayment =  (=) 0
-     * CD contract aDAI balance in USD after repayment =  (=) 2000.0000039468698
-     * Delegator contract DAI balance in USD after repayment =  (=) 6457.95
-     * Delegator contract aDAI balance in USD after repayment =  0
-     * 
      * @notice PASSES 
      */
     it("delegate should fully repay borrowed funds using CD contract's funds", async () => {
@@ -569,18 +483,6 @@ describe('AaveCreditDelegationV2', () => {
 
 
     /**
-     * --Before--:
-     * CD contract DAI balance in USD before withdrawal =  0
-     * CD contract aDAI balance in USD before withdrawal =  2000.0000039468748
-     * Delegator DAI balance in USD before withdrawal =  6457.95
-     * Delegator aDAI balance in USD before withdrawal =  0
-     * 
-     * --After--:
-     * CD contract DAI balance in USD after withdrawal =  (=) 0
-     * CD contract aDAI balance in USD after withdrawal =  (-2000) 0.00000526256755246156
-     * Delegator DAI balance in USD after withdrawal =  (2000) 8457.95
-     * Delegator aDAI balance in USD after withdrawal =  0
-     * 
      * @notice PASSES
      */
     it('delegator should withdraw their entire collateral deposit', async () => {
