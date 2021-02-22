@@ -11,7 +11,7 @@ import {SafeERC20} from "./Libraries.sol";
 import {DelegationDataTypes} from "./DelegationDataTypes.sol";
 import {CreditDeliStorage} from "./CreditDeliStorage.sol";
 
-contract AaveCreditDelegationV2 is CreditDeliStorage {
+contract AaveV2CreditDelegation is CreditDeliStorage {
     using SafeERC20 for IERC20;
     using DelegationDataTypes for DelegationDataTypes.DelegationData;
 
